@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cooperativa {
+  id                  Int                   @id @default(autoincrement())
+  codigo              String                @unique @db.VarChar(50)
+  nome                String                @db.VarChar(255)
+  tipo_cooperativa    String                @db.VarChar(50)
+  logo                String?
+  vinculo_cooperativa vinculo_cooperativa[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pessoa {
+  id                  Int                   @id @default(autoincrement())
+  cpf                 String                @unique @db.VarChar(14)
+  nome                String                @db.VarChar(255)
+  data_nascimento     DateTime              @db.Date
+  rg                  String?               @db.VarChar(20)
+  nome_social         String?               @db.VarChar(255)
+  vinculo_cooperativa vinculo_cooperativa[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model vinculo_cooperativa {
+  id                          Int         @id @default(autoincrement())
+  pessoa_id                   Int
+  cooperativa_id              Int
+  matricula                   String      @unique @db.VarChar(20)
+  login                       String      @unique @db.VarChar(100)
+  senha_hash                  String
+  status                      String      @default("ativo") @db.VarChar(20)
+  data_admissao               DateTime    @db.Date
+  data_desligamento           DateTime?   @db.Date
+  coordenador                 Boolean     @default(false)
+  token_redefinicao           String?
+  token_redefinicao_expira_em DateTime?   @db.Timestamptz(6)
+  cooperativa                 cooperativa @relation(fields: [cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pessoa                      pessoa      @relation(fields: [pessoa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([login], map: "idx_vinculo_login")
+  @@index([matricula], map: "idx_vinculo_matricula")
+}
