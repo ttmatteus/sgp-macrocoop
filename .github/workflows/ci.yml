@@ -8,6 +8,7 @@ on:
 permissions:
   actions: read
   contents: read
+  id-token: write
 
 jobs:
   main:
@@ -29,3 +30,37 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
 
       - run: pnpm exec nx affected -t lint,test,typecheck,build
+
+  deploy-api:
+    needs: main
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec nx run @org/api:prune
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/769732290750/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-deploy@sgp-macrocoop.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: |
+          gcloud run deploy sgp-macrocoop-api \
+            --source apps/api \
+            --region southamerica-east1 \
+            --project sgp-macrocoop \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }}"
