@@ -5,11 +5,13 @@ import { AppService } from './app.service';
 import { AuthModule } from '../modules/auth/auth.module';
 import { CooperadoModule } from '../modules/cooperado/cooperado.module';
 import { PrismaModule } from '../core/prisma/prisma.module';
+import { RedisModule } from '../core/redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    RedisModule,
     AuthModule,
     CooperadoModule,
   ],
