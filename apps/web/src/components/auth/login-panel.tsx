@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { gsap } from 'gsap'
@@ -218,6 +219,15 @@ export function LoginPanel() {
               'Entrar'
             )}
           </SplashButton>
+
+          <p className="text-center text-sm">
+            <Link
+              href="/recuperar-senha"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </p>
         </div>
       </div>
 
