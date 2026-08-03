@@ -29,3 +29,9 @@ Sobe o front em `http://localhost:3000` (ou na próxima porta livre, se a API j�
 ## API em teste
 
 https://sgp-macrocoop-api-769732290750.southamerica-east1.run.app/api
+
+## Web em teste
+
+https://sgp-macrocoop.vercel.app
+
+O front é mobile first, então no navegador de PC o layout vai ficar estranho. Pra ver como deveria ser, abra em um celular ou use o modo de emulação mobile do navegador (DevTools).
