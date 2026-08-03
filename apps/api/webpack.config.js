@@ -9,6 +9,7 @@ module.exports = {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     }),
   },
+  externals: [{ argon2: 'commonjs argon2' }],
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
@@ -20,6 +21,7 @@ module.exports = {
       outputHashing: 'none',
       generatePackageJson: false,
       sourceMap: true,
+      mergeExternals: true,
     }),
   ],
 };
