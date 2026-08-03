@@ -8,7 +8,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
     JwtModule.register({
       global: true,
       secret: process.env['JWT_SECRET'],
-      // provisório: tempo de expiração ainda não confirmado com o stakeholder (card do Trello)
+      // 1h por enquanto, provisorio, ainda n fechou com o stakeholder o tempo certo (ver card do trello)
       signOptions: { expiresIn: '1h' },
     }),
   ],

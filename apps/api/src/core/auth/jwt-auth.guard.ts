@@ -26,6 +26,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    // aqui só lê a denylist, quem escreve é o alterar-senha/recuperar-senha (qdo existirem)
     const revogado = await this.redisService.get(`denylist:jti:${payload.jti}`);
     if (revogado) {
       throw new UnauthorizedException();
