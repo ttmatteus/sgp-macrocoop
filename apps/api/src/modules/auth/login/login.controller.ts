@@ -17,7 +17,6 @@ export class LoginController {
     const { token, user } = await this.loginService.login(dto);
 
     res.set('Cache-Control', 'no-store');
-    res.set('Access-Control-Allow-Credentials', 'true');
     // headers/flags do cookie conforme o card do trello. secure exige https, então em
     // http://localhost o navegador pode n salvar o cookie (testar via https/tunnel)
     res.cookie('session', token, {
