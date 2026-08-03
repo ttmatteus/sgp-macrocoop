@@ -6,12 +6,14 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { CooperadoModule } from '../modules/cooperado/cooperado.module';
 import { PrismaModule } from '../core/prisma/prisma.module';
 import { RedisModule } from '../core/redis/redis.module';
+import { AuthCoreModule } from '../core/auth/auth-core.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     RedisModule,
+    AuthCoreModule,
     AuthModule,
     CooperadoModule,
   ],

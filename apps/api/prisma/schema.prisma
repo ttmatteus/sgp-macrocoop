@@ -25,6 +25,7 @@ model pessoa {
   data_nascimento     DateTime              @db.Date
   rg                  String?               @db.VarChar(20)
   nome_social         String?               @db.VarChar(255)
+  email               String?               @unique @db.VarChar(255)
   vinculo_cooperativa vinculo_cooperativa[]
 }
 

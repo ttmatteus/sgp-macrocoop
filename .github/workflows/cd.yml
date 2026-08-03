@@ -11,8 +11,28 @@ permissions:
   id-token: write
 
 jobs:
-  deploy-api:
+  changes:
     if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event.workflow_run.head_sha }}^
+          filters: |
+            api:
+              - 'apps/api/**'
+
+  deploy-api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
