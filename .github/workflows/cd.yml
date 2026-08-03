@@ -64,4 +64,4 @@ jobs:
             --project sgp-macrocoop \
             --allow-unauthenticated \
             --quiet \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }},UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }},UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }},JWT_SECRET=${{ secrets.JWT_SECRET }}"
