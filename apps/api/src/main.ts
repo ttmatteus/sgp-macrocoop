@@ -11,7 +11,14 @@ import { AppModule } from './app/app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://sgp-macrocoop.vercel.app'],
+    // localhost/ip local com qualquer porta, pra dar pra testar de celular na mesma rede tb
+    origin: [
+      /^http:\/\/localhost:\d+$/,
+      /^http:\/\/127\.0\.0\.1:\d+$/,
+      /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d+$/,
+      /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/,
+      'https://sgp-macrocoop.vercel.app',
+    ],
     credentials: true,
   });
   app.use(cookieParser());

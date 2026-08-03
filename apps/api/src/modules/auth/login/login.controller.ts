@@ -17,12 +17,13 @@ export class LoginController {
     const { token, user } = await this.loginService.login(dto);
 
     res.set('Cache-Control', 'no-store');
-    // headers/flags do cookie conforme o card do trello. secure exige https, então em
-    // http://localhost o navegador pode n salvar o cookie (testar via https/tunnel)
+    // mudei de sameSite lax (era o que o card pedia) pra none pq web e api sao dominios
+    // diferentes de vdd em prod (vercel vs cloud run), e lax n manda cookie em fetch cross-site.
+    // secure exige https, então em http puro o navegador pode n salvar o cookie
     res.cookie('session', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: 'none',
       path: '/',
       maxAge: 3600 * 1000,
     });

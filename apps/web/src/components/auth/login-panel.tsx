@@ -6,6 +6,7 @@ import { gsap } from 'gsap'
 import { IdCard, Lock, HelpCircle, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { SplashButton } from '@/components/ui/splash-button'
 import { LoginLoadingScreen } from '@/components/auth/login-loading-screen'
+import { getApiUrl } from '@/lib/api'
 
 const MAX_TENTATIVAS = 3
 const BLOQUEIO_SEGUNDOS = 5 * 60
@@ -18,6 +19,7 @@ export function LoginPanel() {
   const [usuario, setUsuario] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState(false)
+  const [erroConexao, setErroConexao] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [tentativas, setTentativas] = useState(0)
   const [bloqueado, setBloqueado] = useState(false)
@@ -42,29 +44,43 @@ export function LoginPanel() {
     return () => clearInterval(interval)
   }, [bloqueado])
 
-  const handleEntrar = () => {
+  const handleEntrar = async () => {
     if (bloqueado) return
 
-    // mock pq o back ainda n ta pronto, login de teste: teste / 123456
-    if (usuario !== 'teste' || senha !== '123456') {
-      const novasTentativas = tentativas + 1
-      setTentativas(novasTentativas)
-      setErro(false)
+    setErro(false)
+    setErroConexao(false)
+    setCarregando(true)
 
-      if (novasTentativas >= MAX_TENTATIVAS) {
-        setSegundosRestantes(BLOQUEIO_SEGUNDOS)
-        setBloqueado(true)
+    try {
+      const res = await fetch(`${getApiUrl()}/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario, senha }),
+      })
+
+      if (!res.ok) {
+        setCarregando(false)
+        const novasTentativas = tentativas + 1
+        setTentativas(novasTentativas)
+
+        if (novasTentativas >= MAX_TENTATIVAS) {
+          setSegundosRestantes(BLOQUEIO_SEGUNDOS)
+          setBloqueado(true)
+          return
+        }
+
+        setErro(true)
         return
       }
 
-      setErro(true)
-      return
+      // TODO: troca pra /perfil qnd essa tela entrar (n existe nessa branch ainda)
+      router.push('/')
+    } catch {
+      // fetch falhou de vdd (api fora do ar, cors bloqueou, sem rede etc), n é credencial errada
+      setCarregando(false)
+      setErroConexao(true)
     }
-
-    setErro(false)
-    setCarregando(true)
-    // TODO: troca pra /perfil qnd essa tela entrar (n existe nessa branch ainda)
-    setTimeout(() => router.push('/'), 2400)
   }
 
   const handleVoltar = (e: React.MouseEvent) => {
@@ -159,6 +175,7 @@ export function LoginPanel() {
                 onChange={(e) => {
                   setUsuario(e.target.value)
                   setErro(false)
+                  setErroConexao(false)
                 }}
                 className={`h-14 w-full rounded-xl border bg-muted/70 pl-12 pr-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-card focus:ring-[3px] ${
                   erro
@@ -176,6 +193,7 @@ export function LoginPanel() {
                 onChange={(e) => {
                   setSenha(e.target.value)
                   setErro(false)
+                  setErroConexao(false)
                 }}
                 className={`h-14 w-full rounded-xl border bg-muted/70 pl-12 pr-12 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-card focus:ring-[3px] ${
                   erro
@@ -195,6 +213,11 @@ export function LoginPanel() {
             {erro && !bloqueado && (
               <p className="text-sm font-medium text-destructive">
                 Usuário ou senha inválidos. Tente novamente.
+              </p>
+            )}
+            {erroConexao && (
+              <p className="text-sm font-medium text-destructive">
+                Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.
               </p>
             )}
             {bloqueado && (
