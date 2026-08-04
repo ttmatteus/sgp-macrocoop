@@ -6,7 +6,7 @@ import { gsap } from 'gsap'
 import { IdCard, Lock, HelpCircle, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { SplashButton } from '@/components/ui/splash-button'
 import { LoginLoadingScreen } from '@/components/auth/login-loading-screen'
-import { getApiUrl } from '@/lib/api'
+import { login } from '@/app/(auth)/login/actions'
 
 const MAX_TENTATIVAS = 3
 const BLOQUEIO_SEGUNDOS = 5 * 60
@@ -51,36 +51,31 @@ export function LoginPanel() {
     setErroConexao(false)
     setCarregando(true)
 
-    try {
-      const res = await fetch(`${getApiUrl()}/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, senha }),
-      })
+    const resultado = await login(usuario, senha)
 
-      if (!res.ok) {
-        setCarregando(false)
-        const novasTentativas = tentativas + 1
-        setTentativas(novasTentativas)
+    if (!resultado.ok) {
+      setCarregando(false)
 
-        if (novasTentativas >= MAX_TENTATIVAS) {
-          setSegundosRestantes(BLOQUEIO_SEGUNDOS)
-          setBloqueado(true)
-          return
-        }
-
-        setErro(true)
+      if (resultado.erro === 'conexao') {
+        setErroConexao(true)
         return
       }
 
-      // TODO: troca pra /perfil qnd essa tela entrar (n existe nessa branch ainda)
-      router.push('/')
-    } catch {
-      // fetch falhou de vdd (api fora do ar, cors bloqueou, sem rede etc), n é credencial errada
-      setCarregando(false)
-      setErroConexao(true)
+      const novasTentativas = tentativas + 1
+      setTentativas(novasTentativas)
+
+      if (novasTentativas >= MAX_TENTATIVAS) {
+        setSegundosRestantes(BLOQUEIO_SEGUNDOS)
+        setBloqueado(true)
+        return
+      }
+
+      setErro(true)
+      return
     }
+
+    // TODO: troca pra /perfil qnd essa tela entrar (n existe nessa branch ainda)
+    router.push('/')
   }
 
   const handleVoltar = (e: React.MouseEvent) => {

@@ -17,13 +17,12 @@ export class LoginController {
     const { token, user } = await this.loginService.login(dto);
 
     res.set('Cache-Control', 'no-store');
-    // mudei de sameSite lax (era o que o card pedia) pra none pq web e api sao dominios
-    // diferentes de vdd em prod (vercel vs cloud run), e lax n manda cookie em fetch cross-site.
-    // secure exige https, então em http puro o navegador pode n salvar o cookie
+    // o next chama esse endpoint server-to-server (server action) e le o cookie
+    // do header Set-Cookie pra setar o dele mesmo. o token nunca vai no body da resposta
     res.cookie('session', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none',
+      sameSite: 'lax',
       path: '/',
       maxAge: 3600 * 1000,
     });
