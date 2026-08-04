@@ -2,8 +2,8 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Next.js options go here
-  // See: https://nextjs.org/docs/app/api-reference/config/next-config-js
+  // pra testar de celular na mesma rede local em dev
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*'],
 };
 
 module.exports = nextConfig;
