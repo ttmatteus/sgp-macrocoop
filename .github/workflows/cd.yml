@@ -22,13 +22,13 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          base: ${{ github.event.workflow_run.head_sha }}^
-          filters: |
-            api:
-              - 'apps/api/**'
+      - id: filter
+        run: |
+          if git diff --quiet ${{ github.event.workflow_run.head_sha }}^ ${{ github.event.workflow_run.head_sha }} -- apps/api; then
+            echo "api=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "api=true" >> "$GITHUB_OUTPUT"
+          fi
 
   deploy-api:
     needs: changes
