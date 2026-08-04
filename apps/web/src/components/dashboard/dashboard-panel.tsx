@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { logout } from '@/app/dashboard/actions'
+import { logout } from '@/app/(app)/dashboard/actions'
 import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
@@ -164,7 +164,7 @@ export function DashboardPanel({ nome }: { nome: string }) {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* TopAppBar */}
       <header className="flex h-14 shrink-0 items-center justify-between bg-background px-5">
         <div className="flex items-center gap-3">
@@ -388,31 +388,7 @@ export function DashboardPanel({ nome }: { nome: string }) {
         </button>
       </div>
 
-      {/* BottomNav */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around rounded-t-2xl border-t border-border bg-card px-3 pb-4 pt-2 shadow-lg">
-        <button className="flex flex-col items-center gap-0.5 rounded-xl bg-primary/12 px-4 py-1.5 text-[11px] font-medium text-primary">
-          <Home className="size-5" />
-          Início
-        </button>
-        <button disabled className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground/50">
-          <History className="size-5" />
-          Histórico
-        </button>
-        <button
-          onClick={() => router.push('/perfil')}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-primary"
-        >
-          <User className="size-5" />
-          Perfil
-        </button>
-        <button
-          onClick={() => router.push('/perfil/ajustes')}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-primary"
-        >
-          <Settings className="size-5" />
-          Ajustes
-        </button>
-      </nav>
+      {/* BottomNav agora é compartilhado, vem do AppShell (trilha dashboard/perfil/ajustes) */}
 
       {menuAberto && <div onClick={() => setMenuAberto(false)} className="fixed inset-0 z-40 bg-foreground/30" />}
 

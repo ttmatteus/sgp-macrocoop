@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { gsap } from 'gsap'
 import { Home, History, User, Settings } from 'lucide-react'
+import { DashboardPanel } from '@/components/dashboard/dashboard-panel'
 import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
 
@@ -15,7 +16,23 @@ const bottomNav = [
   { label: 'Ajustes', icon: Settings, href: '/perfil/ajustes' },
 ]
 
-export default function PerfilLayout({ children }: { children: React.ReactNode }) {
+type Tela = 'dashboard' | 'perfil' | 'ajustes'
+
+// trilha de 3 paineis (w-[300%], cada um w-1/3 = 100% da tela).
+// anima "left" em vez de transform/xPercent de propósito: o DashboardPanel
+// usa bastante position:fixed (fab, drawer, modal de sair), e um transform
+// no ancestral vira containing block pra esses fixed, prendendo eles dentro
+// da trilha em vez da tela inteira. left não tem esse efeito colateral, MAS
+// % de "left" é relativo à largura do elemento pai (a tela, 100%), não da
+// própria trilha (300%) — por isso aqui é -100%/-200% pra andar um painel
+// inteiro por vez, diferente do xPercent (que seria relativo à trilha)
+const posicaoPorTela: Record<Tela, string> = {
+  dashboard: '0%',
+  perfil: '-100%',
+  ajustes: '-200%',
+}
+
+export function AppShell({ nome, children }: { nome: string; children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const trackRef = useRef<HTMLDivElement>(null)
@@ -26,7 +43,7 @@ export default function PerfilLayout({ children }: { children: React.ReactNode }
   // alterar-senha n é aba da trilha, é navegação pra frente, ai n renderiza a
   // trilha aqui pq o router já foi pra outra pagina
   const emAlterarSenha = pathname.startsWith('/perfil/ajustes/alterar-senha')
-  const tela: 'perfil' | 'ajustes' = pathname === '/perfil/ajustes' ? 'ajustes' : 'perfil'
+  const tela: Tela = pathname === '/perfil/ajustes' ? 'ajustes' : pathname === '/perfil' ? 'perfil' : 'dashboard'
 
   useEffect(() => {
     // enquanto tá no alterar-senha a div da trilha nem existe no dom (ve o
@@ -37,27 +54,27 @@ export default function PerfilLayout({ children }: { children: React.ReactNode }
       return
     }
     if (!trackRef.current) return
-    const xPercent = tela === 'perfil' ? 0 : -50
+    const left = posicaoPorTela[tela]
 
     // no primeiro mount (reload ou voltando do alterar-senha) a trilha já
-    // nasce na aba certa, sem deslizar a partir do perfil
+    // nasce na aba certa, sem deslizar a partir do dashboard
     if (!montouRef.current) {
       montouRef.current = true
-      gsap.set(trackRef.current, { xPercent })
+      gsap.set(trackRef.current, { left })
       return
     }
 
     gsap.to(trackRef.current, {
-      xPercent,
+      left,
       duration: 0.5,
       ease: 'power2.inOut',
     })
   }, [tela, emAlterarSenha])
 
-  // splash verde que expande do clique e revela o alterar-senha por baixo
-  // fica aqui no layout (fora da trilha que o gsap transforma) e acima do
-  // navbar, senão o transform da trilha prende o splash num stacking context
-  // isolado e o navbar (fixed) fica por cima dele mesmo com z-index maior
+  // splash verde que expande do clique e revela o alterar-senha por baixo.
+  // fica aqui fora da trilha (que o gsap transforma) e acima do navbar,
+  // senão o transform da trilha prende o splash num stacking context isolado
+  // e o navbar (fixed) fica por cima dele mesmo com z-index maior
   const handleAlterarSenha = (e: React.MouseEvent) => {
     const frame = frameRef.current
     const splash = splashRef.current
@@ -89,15 +106,18 @@ export default function PerfilLayout({ children }: { children: React.ReactNode }
 
   // alterar-senha empilha (navegação pra frente), n é aba da trilha, só
   // renderiza o conteúdo real da rota aqui
-  if (emAlterarSenha) return <>{children}</>;
+  if (emAlterarSenha) return <>{children}</>
 
   return (
     <div ref={frameRef} className="relative h-dvh overflow-hidden bg-background">
-      <div ref={trackRef} className="flex h-full w-[200%]">
-        <div className="h-full w-1/2 shrink-0">
+      <div ref={trackRef} className="relative left-0 flex h-full w-[300%]">
+        <div className="h-full w-1/3 shrink-0">
+          <DashboardPanel nome={nome} />
+        </div>
+        <div className="h-full w-1/3 shrink-0">
           <PerfilPanel />
         </div>
-        <div className="h-full w-1/2 shrink-0">
+        <div className="h-full w-1/3 shrink-0">
           <AjustesPanel onAlterarSenha={handleAlterarSenha} />
         </div>
       </div>
@@ -105,7 +125,10 @@ export default function PerfilLayout({ children }: { children: React.ReactNode }
       {/* bottom nav, fica por cima da trilha sempre visível */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-around rounded-t-2xl border-t border-border bg-card px-3 pb-4 pt-2 shadow-lg">
         {bottomNav.map((item) => {
-          const ativo = (item.label === 'Perfil' && tela === 'perfil') || (item.label === 'Ajustes' && tela === 'ajustes')
+          const ativo =
+            (item.label === 'Início' && tela === 'dashboard') ||
+            (item.label === 'Perfil' && tela === 'perfil') ||
+            (item.label === 'Ajustes' && tela === 'ajustes')
           const conteudo = (
             <>
               <item.icon className="size-5" />
@@ -120,7 +143,7 @@ export default function PerfilLayout({ children }: { children: React.ReactNode }
               {conteudo}
             </Link>
           ) : (
-            <button key={item.label} className={className} disabled onClick={() => router.push('/perfil')}>
+            <button key={item.label} className={className} disabled>
               {conteudo}
             </button>
           )
