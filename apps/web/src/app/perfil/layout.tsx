@@ -9,7 +9,7 @@ import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
 
 const bottomNav = [
-  { label: 'Início', icon: Home, href: null },
+  { label: 'Início', icon: Home, href: '/dashboard' },
   { label: 'Histórico', icon: History, href: null },
   { label: 'Perfil', icon: User, href: '/perfil' },
   { label: 'Ajustes', icon: Settings, href: '/perfil/ajustes' },
