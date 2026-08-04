@@ -1,27 +1,17 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { PerfilService } from './perfil.service';
 import { PerfilDto } from './dto/perfil.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUserPayload } from '../../auth/types/current-user-payload.type';
 
 @Controller('perfil')
 export class PerfilController {
-  // Injeção de dependência: O Controller recebe o Service pelo construtor.
-  // O 'readonly' garante que a referência ao service não seja alterada acidentalmente.
-    constructor(private readonly perfilService: PerfilService) {}
+  constructor(private readonly perfilService: PerfilService) {}
 
-    @Get()
-        async obterPerfil(): Promise<PerfilDto> {
-    /**
-     * [MOCK PROVISÓRIO - Integração com módulo Auth]
-     * Como a autenticação por cookie + denylist ainda está em desenvolvimento,
-     * estamos mockando o ID do usuário de teste que já existe no banco.
-     * 
-     * Futuramente, substituiremos esta linha extraindo o usuário logado via Guard,
-     * possivelmente usando um decorator customizado, ex:
-     * obterPerfil(@CurrentUser() usuario: UsuarioAutenticado)
-     */
-    const mockUsuarioLogadoId = 1;
-
-    // Delegamos a regra de busca (Pessoa + VinculoCooperativa) para a camada de Service
-    return this.perfilService.buscarPerfilDoCooperado(mockUsuarioLogadoId);
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async obterPerfil(@CurrentUser() user: CurrentUserPayload): Promise<PerfilDto> {
+    return this.perfilService.buscarPerfilDoCooperado(user.vinculoId);
   }
 }
