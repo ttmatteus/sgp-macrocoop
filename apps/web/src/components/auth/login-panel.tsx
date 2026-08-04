@@ -74,8 +74,7 @@ export function LoginPanel() {
       return
     }
 
-    // TODO: troca pra /perfil qnd essa tela entrar (n existe nessa branch ainda)
-    router.push('/')
+    router.push('/dashboard')
   }
 
   const handleVoltar = (e: React.MouseEvent) => {
