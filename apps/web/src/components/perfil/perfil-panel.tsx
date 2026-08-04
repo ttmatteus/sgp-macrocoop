@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   Building,
   Calendar,
@@ -23,9 +22,7 @@ const acoes = [
   { label: 'Ajuda', icon: HelpCircle, href: null },
 ]
 
-export function PerfilPanel() {
-  const router = useRouter()
-
+export function PerfilPanel({ onSair }: { onSair: () => void }) {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Header com organic wave */}
@@ -35,7 +32,7 @@ export function PerfilPanel() {
             <CircleUser className="size-8" />
             <h1 className="text-lg font-bold">Perfil</h1>
           </div>
-          <button onClick={() => router.push('/login')} className="text-xs font-semibold hover:opacity-80">
+          <button onClick={onSair} className="text-xs font-semibold hover:opacity-80">
             Sair
           </button>
         </div>

@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { gsap } from 'gsap'
 import { Home, History, User, Settings } from 'lucide-react'
+import { logout } from '@/app/(app)/dashboard/actions'
 import { DashboardPanel } from '@/components/dashboard/dashboard-panel'
+import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
 
@@ -39,6 +41,18 @@ export function AppShell({ nome, children }: { nome: string; children: React.Rea
   const frameRef = useRef<HTMLDivElement>(null)
   const splashRef = useRef<HTMLDivElement>(null)
   const montouRef = useRef(false)
+  const [saindo, setSaindo] = useState(false)
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false)
+
+  // centralizado aqui pq dashboard, perfil e ajustes têm botão de sair, cada um
+  const pedirConfirmacaoSaida = () => setConfirmandoSaida(true)
+
+  const confirmarSaida = async () => {
+    setConfirmandoSaida(false)
+    setSaindo(true)
+    await logout()
+    setTimeout(() => router.push('/login'), 1800)
+  }
 
   // alterar-senha n é aba da trilha, é navegação pra frente, ai n renderiza a
   // trilha aqui pq o router já foi pra outra pagina
@@ -104,6 +118,10 @@ export function AppShell({ nome, children }: { nome: string; children: React.Rea
     })
   }
 
+  if (saindo) {
+    return <LogoutScreen />
+  }
+
   // alterar-senha empilha (navegação pra frente), n é aba da trilha, só
   // renderiza o conteúdo real da rota aqui
   if (emAlterarSenha) return <>{children}</>
@@ -112,13 +130,13 @@ export function AppShell({ nome, children }: { nome: string; children: React.Rea
     <div ref={frameRef} className="relative h-dvh overflow-hidden bg-background">
       <div ref={trackRef} className="relative left-0 flex h-full w-[300%]">
         <div className="h-full w-1/3 shrink-0">
-          <DashboardPanel nome={nome} />
+          <DashboardPanel nome={nome} onSair={pedirConfirmacaoSaida} />
         </div>
         <div className="h-full w-1/3 shrink-0">
-          <PerfilPanel />
+          <PerfilPanel onSair={pedirConfirmacaoSaida} />
         </div>
         <div className="h-full w-1/3 shrink-0">
-          <AjustesPanel onAlterarSenha={handleAlterarSenha} />
+          <AjustesPanel onAlterarSenha={handleAlterarSenha} onSair={pedirConfirmacaoSaida} />
         </div>
       </div>
 
@@ -156,6 +174,36 @@ export function AppShell({ nome, children }: { nome: string; children: React.Rea
         className="pointer-events-none fixed z-30 rounded-full bg-primary"
         style={{ transform: 'scale(0)' }}
       />
+
+      {/* Confirmação de saída, compartilhada entre dashboard/perfil/ajustes */}
+      {confirmandoSaida && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 px-6">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 text-center shadow-2xl">
+            <div className="mx-auto flex size-16 items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element -- gif animado, o next/image tira a animação */}
+              <img src="/face-triste.gif" alt="" className="size-full object-contain" />
+            </div>
+            <p className="mt-1 text-base font-semibold text-foreground">Sair da conta?</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Você vai precisar entrar de novo pra acessar o SGP.
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setConfirmandoSaida(false)}
+                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarSaida}
+                className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

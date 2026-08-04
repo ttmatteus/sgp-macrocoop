@@ -21,8 +21,10 @@ import {
 
 export function AjustesPanel({
   onAlterarSenha,
+  onSair,
 }: {
   onAlterarSenha?: (e: React.MouseEvent) => void
+  onSair: () => void
 }) {
   const router = useRouter()
 
@@ -117,7 +119,7 @@ export function AjustesPanel({
 
         {/* Sair */}
         <button
-          onClick={() => router.push('/login')}
+          onClick={onSair}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-3.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
         >
           <LogOut className="size-4" />

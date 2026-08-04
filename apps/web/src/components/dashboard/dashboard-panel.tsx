@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { logout } from '@/app/(app)/dashboard/actions'
-import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
   Archive,
@@ -139,28 +137,15 @@ function iniciais(nome: string) {
     .toUpperCase()
 }
 
-export function DashboardPanel({ nome }: { nome: string }) {
+export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => void }) {
   const router = useRouter()
   const [fabAberto, setFabAberto] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [notifAberto, setNotifAberto] = useState(false)
-  const [saindo, setSaindo] = useState(false)
-  const [confirmandoSaida, setConfirmandoSaida] = useState(false)
 
   const pedirConfirmacaoSaida = () => {
     setMenuAberto(false)
-    setConfirmandoSaida(true)
-  }
-
-  const confirmarSaida = async () => {
-    setConfirmandoSaida(false)
-    setSaindo(true)
-    await logout()
-    setTimeout(() => router.push('/login'), 1800)
-  }
-
-  if (saindo) {
-    return <LogoutScreen />
+    onSair()
   }
 
   return (
@@ -447,35 +432,7 @@ export function DashboardPanel({ nome }: { nome: string }) {
         </button>
       </div>
 
-      {/* Confirmação de saída */}
-      {confirmandoSaida && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 px-6">
-          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 text-center shadow-2xl">
-            <div className="mx-auto flex size-16 items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element -- gif animado, o next/image tira a animação */}
-              <img src="/face-triste.gif" alt="" className="size-full object-contain" />
-            </div>
-            <p className="mt-1 text-base font-semibold text-foreground">Sair da conta?</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Você vai precisar entrar de novo pra acessar o SGP.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                onClick={() => setConfirmandoSaida(false)}
-                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarSaida}
-                className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirmação de saída fica no AppShell agora, é compartilhada com perfil/ajustes */}
     </div>
   )
 }
