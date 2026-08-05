@@ -10,6 +10,7 @@ import { AppModule } from './app/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   // localhost/ip de rede local com qualquer porta, pra dar pra testar de celular na mesma rede.
   // isso so faz sentido em dev, entao fica de fora do build de producao
   const origensRedeLocal = [
