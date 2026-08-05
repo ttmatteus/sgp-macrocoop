@@ -1,8 +1,14 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { RedisService } from '../redis/redis.service';
 import { CurrentUserPayload } from './current-user.interface';
+import { deniedSessionKey } from './session.constants';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -26,8 +32,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    // aqui só lê a denylist, quem escreve é o alterar-senha/recuperar-senha (qdo existirem)
-    const revogado = await this.redisService.get(`denylist:jti:${payload.jti}`);
+    const revogado = await this.redisService.get(deniedSessionKey(payload.jti));
     if (revogado) {
       throw new UnauthorizedException();
     }

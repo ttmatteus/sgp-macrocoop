@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // tudo que n tiver aqui e protegido
-const ROTAS_PUBLICAS = ['/', '/login']
+const ROTAS_PUBLICAS = ['/', '/login', '/recuperar-senha']
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
