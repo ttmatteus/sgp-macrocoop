@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,7 +12,6 @@ import {
 } from '@nestjs/common';
 import {
   RecuperarSenhaDto,
-  RecuperarSenhaEmailParamsDto,
   RedefinirSenhaDto,
   RedefinirSenhaTokenParamsDto,
 } from './dto/recuperar-senha.dto';
@@ -24,18 +24,20 @@ export class RecuperarSenhaController {
   @Post('recupera-senha')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  solicitarPorUsuario(@Body() dto: RecuperarSenhaDto, @Ip() ip: string) {
-    return this.recuperarSenhaService.solicitarPorUsuario(dto.usuario, ip);
-  }
+  solicitar(@Body() dto: RecuperarSenhaDto, @Ip() ip: string) {
+    if (dto.usuario && dto.email) {
+      throw new BadRequestException('Informe apenas usuário ou e-mail.');
+    }
 
-  @Post('recupera-senha/:email')
-  @HttpCode(HttpStatus.OK)
-  @Header('Cache-Control', 'no-store')
-  solicitarPorEmail(
-    @Param() params: RecuperarSenhaEmailParamsDto,
-    @Ip() ip: string,
-  ) {
-    return this.recuperarSenhaService.solicitarPorEmail(params.email, ip);
+    if (dto.email) {
+      return this.recuperarSenhaService.solicitarPorEmail(dto.email, ip);
+    }
+
+    if (!dto.usuario) {
+      throw new BadRequestException('Informe usuário ou e-mail.');
+    }
+
+    return this.recuperarSenhaService.solicitarPorUsuario(dto.usuario, ip);
   }
 
   @Get('redefinir-senha/:token')
@@ -46,6 +48,7 @@ export class RecuperarSenhaController {
 
   @Post('redefinir-senha')
   @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
   redefinir(@Body() dto: RedefinirSenhaDto) {
     return this.recuperarSenhaService.redefinir(dto.token, dto.senha);
   }

@@ -1,7 +1,6 @@
 import { validate } from 'class-validator';
 import {
   RecuperarSenhaDto,
-  RecuperarSenhaEmailParamsDto,
   RedefinirSenhaDto,
   RedefinirSenhaTokenParamsDto,
 } from './recuperar-senha.dto';
@@ -21,9 +20,22 @@ describe('RecuperarSenhaDto', () => {
     expect(await validate(dto)).not.toHaveLength(0);
   });
 
-  it('valida o parâmetro de e-mail', async () => {
-    const dto = new RecuperarSenhaEmailParamsDto();
+  it('aceita e-mail válido', async () => {
+    const dto = new RecuperarSenhaDto();
+    dto.email = 'cooperado@macrocoop.com.br';
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+  });
+
+  it('rejeita e-mail inválido', async () => {
+    const dto = new RecuperarSenhaDto();
     dto.email = 'valor-invalido';
+
+    expect(await validate(dto)).not.toHaveLength(0);
+  });
+
+  it('exige usuário ou e-mail', async () => {
+    const dto = new RecuperarSenhaDto();
 
     expect(await validate(dto)).not.toHaveLength(0);
   });

@@ -78,8 +78,6 @@ export class RecuperarSenhaService {
     const { vinculo, tokenHash, agora } = await this.obterTokenValido(token);
 
     const senhaHash = await hash(senha);
-    await this.invalidarSessoes(vinculo.id);
-
     const atualizacao = await this.prisma.vinculo_cooperativa.updateMany({
       where: {
         id: vinculo.id,
@@ -96,6 +94,8 @@ export class RecuperarSenhaService {
     if (atualizacao.count === 0) {
       throw new GoneException('Token de redefinição expirado.');
     }
+
+    await this.invalidarSessoes(vinculo.id);
 
     return { sucesso: true, mensagem: 'Senha redefinida com sucesso.' };
   }

@@ -159,6 +159,9 @@ describe('RecuperarSenhaService', () => {
 
     const atualizacao = prisma.vinculo_cooperativa.updateMany.mock.calls[0][0];
     expect(await verify(atualizacao.data.senha_hash, 'Senha123')).toBe(true);
+    expect(
+      prisma.vinculo_cooperativa.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(redis.smembers.mock.invocationCallOrder[0]);
     expect(redis.set).toHaveBeenCalledTimes(2);
     expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-1', '1', {
       ex: 3600,
@@ -181,6 +184,8 @@ describe('RecuperarSenhaService', () => {
     await expect(
       service.redefinir('token-usado', 'Senha123'),
     ).rejects.toBeInstanceOf(GoneException);
+    expect(redis.smembers).not.toHaveBeenCalled();
+    expect(redis.set).not.toHaveBeenCalled();
   });
 
   it('retorna os dados associados ao token válido', async () => {

@@ -5,19 +5,20 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class RecuperarSenhaDto {
+  @ValidateIf((dto: RecuperarSenhaDto) => !dto.email)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  usuario!: string;
-}
+  usuario?: string;
 
-export class RecuperarSenhaEmailParamsDto {
+  @ValidateIf((dto: RecuperarSenhaDto) => !dto.usuario)
   @IsEmail()
   @MaxLength(255)
-  email!: string;
+  email?: string;
 }
 
 export class RedefinirSenhaTokenParamsDto {

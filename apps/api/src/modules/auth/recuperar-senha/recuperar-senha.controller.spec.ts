@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { HEADERS_METADATA } from '@nestjs/common/constants';
 import { RecuperarSenhaController } from './recuperar-senha.controller';
 import { RecuperarSenhaService } from './recuperar-senha.service';
@@ -36,7 +37,7 @@ describe('RecuperarSenhaController', () => {
     service.solicitarPorUsuario.mockResolvedValue(resposta);
 
     await expect(
-      controller.solicitarPorUsuario({ usuario: 'cooperado' }, '127.0.0.1'),
+      controller.solicitar({ usuario: 'cooperado' }, '127.0.0.1'),
     ).resolves.toEqual(resposta);
     expect(service.solicitarPorUsuario).toHaveBeenCalledWith(
       'cooperado',
@@ -47,7 +48,7 @@ describe('RecuperarSenhaController', () => {
   it('impede cache da resposta com token', () => {
     const headers = Reflect.getMetadata(
       HEADERS_METADATA,
-      RecuperarSenhaController.prototype.solicitarPorUsuario,
+      RecuperarSenhaController.prototype.solicitar,
     );
 
     expect(headers).toContainEqual({
@@ -59,7 +60,7 @@ describe('RecuperarSenhaController', () => {
   it('solicita recuperação por e-mail', async () => {
     service.solicitarPorEmail.mockResolvedValue({ modo: 'dev' });
 
-    await controller.solicitarPorEmail(
+    await controller.solicitar(
       { email: 'cooperado@macrocoop.com.br' },
       '127.0.0.1',
     );
@@ -70,12 +71,33 @@ describe('RecuperarSenhaController', () => {
     );
   });
 
+  it('rejeita usuário e e-mail na mesma solicitação', () => {
+    expect(() =>
+      controller.solicitar(
+        { usuario: 'cooperado', email: 'cooperado@macrocoop.com.br' },
+        '127.0.0.1',
+      ),
+    ).toThrow(BadRequestException);
+  });
+
   it('redefine a senha com token', async () => {
     service.redefinir.mockResolvedValue({ mensagem: 'ok' });
 
     await controller.redefinir({ token: 'token', senha: 'Senha123' });
 
     expect(service.redefinir).toHaveBeenCalledWith('token', 'Senha123');
+  });
+
+  it('impede cache da resposta de redefinição', () => {
+    const headers = Reflect.getMetadata(
+      HEADERS_METADATA,
+      RecuperarSenhaController.prototype.redefinir,
+    );
+
+    expect(headers).toContainEqual({
+      name: 'Cache-Control',
+      value: 'no-store',
+    });
   });
 
   it('consulta os dados do token de redefinição', async () => {
