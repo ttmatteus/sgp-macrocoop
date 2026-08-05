@@ -1,16 +1,71 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { gsap } from 'gsap'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { SplashButton } from '@/components/ui/splash-button'
+import { alterarSenha } from './actions'
+
+// mesma regra do AlterarSenhaDto no back
+const MIN_SENHA = 8
+const MAX_SENHA = 72
 
 export default function AlterarSenhaPage() {
   const router = useRouter()
   const frameRef = useRef<HTMLDivElement>(null)
   const splashRef = useRef<HTMLDivElement>(null)
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [senhaNova, setSenhaNova] = useState('')
+  const [confirmacao, setConfirmacao] = useState('')
+  const [erro, setErro] = useState('')
+  const [carregando, setCarregando] = useState(false)
+  const [sucesso, setSucesso] = useState(false)
+
+  const handleSalvar = async () => {
+    if (!senhaAtual || !senhaNova) {
+      setErro('Preencha todos os campos.')
+      return
+    }
+
+    if (senhaNova.length < MIN_SENHA || senhaNova.length > MAX_SENHA) {
+      setErro(`A nova senha deve ter entre ${MIN_SENHA} e ${MAX_SENHA} caracteres.`)
+      return
+    }
+
+    if (senhaNova !== confirmacao) {
+      setErro('As senhas não conferem.')
+      return
+    }
+
+    if (senhaNova === senhaAtual) {
+      setErro('A nova senha precisa ser diferente da atual.')
+      return
+    }
+
+    setErro('')
+    setCarregando(true)
+    const resultado = await alterarSenha(senhaAtual, senhaNova)
+    setCarregando(false)
+
+    if (!resultado.ok) {
+      setErro(
+        resultado.erro === 'senha_incorreta'
+          ? 'A senha atual está incorreta.'
+          : resultado.erro === 'inativo'
+            ? 'Seu vínculo está inativo. Procure a cooperativa.'
+            : resultado.erro === 'nao_encontrado'
+              ? 'Vínculo não encontrado.'
+              : resultado.erro === 'senha'
+                ? 'A nova senha não atende aos requisitos.'
+                : 'Não foi possível conectar ao servidor. Tente novamente.',
+      )
+      return
+    }
+
+    setSucesso(true)
+  }
 
   const handleVoltar = (e: React.MouseEvent) => {
     const frame = frameRef.current
@@ -39,6 +94,32 @@ export default function AlterarSenhaPage() {
       ease: 'power3.inOut',
       onComplete: () => router.push('/perfil/ajustes'),
     })
+  }
+
+  // trocar a senha revoga o token atual no back, entao n da pra continuar
+  // navegando: tem que logar de novo com a senha nova
+  if (sucesso) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-7">
+        <div className="flex w-full max-w-[320px] flex-col items-center gap-4 text-center">
+          <span className="flex size-16 items-center justify-center rounded-full bg-success/15">
+            <CheckCircle2 className="size-9 text-success" />
+          </span>
+          <div className="space-y-1.5">
+            <h2 className="text-2xl font-bold tracking-tight text-primary">Senha alterada!</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Por segurança sua sessão foi encerrada. Entre de novo com a senha nova.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/login')}
+            className="mt-2 h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:translate-y-px"
+          >
+            Ir para o login
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -72,6 +153,11 @@ export default function AlterarSenhaPage() {
               <input
                 type="password"
                 placeholder="Senha atual"
+                value={senhaAtual}
+                onChange={(e) => {
+                  setSenhaAtual(e.target.value)
+                  setErro('')
+                }}
                 className="h-14 w-full rounded-xl border border-transparent bg-muted/70 pl-12 pr-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-card focus:ring-[3px] focus:ring-ring/30"
               />
             </div>
@@ -80,6 +166,11 @@ export default function AlterarSenhaPage() {
               <input
                 type="password"
                 placeholder="Nova senha"
+                value={senhaNova}
+                onChange={(e) => {
+                  setSenhaNova(e.target.value)
+                  setErro('')
+                }}
                 className="h-14 w-full rounded-xl border border-transparent bg-muted/70 pl-12 pr-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-card focus:ring-[3px] focus:ring-ring/30"
               />
             </div>
@@ -88,14 +179,23 @@ export default function AlterarSenhaPage() {
               <input
                 type="password"
                 placeholder="Confirmar nova senha"
+                value={confirmacao}
+                onChange={(e) => {
+                  setConfirmacao(e.target.value)
+                  setErro('')
+                }}
                 className="h-14 w-full rounded-xl border border-transparent bg-muted/70 pl-12 pr-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-card focus:ring-[3px] focus:ring-ring/30"
               />
             </div>
+            {erro && <p className="text-sm font-medium text-destructive">{erro}</p>}
           </div>
 
-          {/* inputs ainda n tao controlados e o botao n faz nada, só visual por enquanto */}
-          <SplashButton className="h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:translate-y-px">
-            Salvar nova senha
+          <SplashButton
+            onClick={handleSalvar}
+            disabled={carregando}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:translate-y-px disabled:opacity-70"
+          >
+            {carregando ? <Loader2 className="size-5 animate-spin" /> : 'Salvar nova senha'}
           </SplashButton>
 
           <p className="text-center text-sm">
