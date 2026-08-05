@@ -31,7 +31,7 @@ export class LoginService {
 
   async login({ usuario, senha }: LoginCredentials): Promise<{
     token: string;
-    user: Omit<CurrentUserPayload, 'jti'>;
+    user: Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'>;
   }> {
     const vinculo = await this.prisma.vinculo_cooperativa.findUnique({
       where: { login: usuario },
@@ -43,7 +43,9 @@ export class LoginService {
     }
 
     const jti = randomUUID();
-    const payload: Omit<CurrentUserPayload, 'jti'> = {
+    // jti/iat/exp saem daqui de proposito: quem preenche esses 3 é o proprio
+    // jwt na hora de assinar, a gente so monta os claims da aplicacao
+    const payload: Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'> = {
       vinculoId: vinculo.id,
       pessoaId: vinculo.pessoa_id,
       login: vinculo.login,

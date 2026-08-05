@@ -6,6 +6,8 @@ export interface CooperativaClaims {
 
 export interface CurrentUserPayload {
   jti: string;
+  iat: number;
+  exp: number;
   vinculoId: number;
   pessoaId: number;
   login: string;
