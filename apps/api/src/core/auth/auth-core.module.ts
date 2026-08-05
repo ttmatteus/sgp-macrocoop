@@ -9,6 +9,8 @@ import { SESSION_TTL_SECONDS } from './session.constants';
     JwtModule.register({
       global: true,
       secret: process.env['JWT_SECRET'],
+      // 1h por enquanto, provisorio, ainda n fechou com o stakeholder o tempo
+      // certo (ver card do trello)
       signOptions: { expiresIn: SESSION_TTL_SECONDS },
     }),
   ],

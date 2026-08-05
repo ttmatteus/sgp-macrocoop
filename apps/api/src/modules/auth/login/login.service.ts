@@ -48,6 +48,7 @@ export class LoginService {
       pessoaId: vinculo.pessoa_id,
       login: vinculo.login,
       nome: vinculo.pessoa.nome,
+      // gambiarra by design: ainda n tem nivel/permissao de vdd no schema
       nivel: vinculo.coordenador ? 'coordenador' : 'cooperado',
       permissoes: [],
       cooperativa: {
@@ -58,11 +59,15 @@ export class LoginService {
     };
 
     const token = this.jwtService.sign(payload, { jwtid: jti });
+    // de proposito sem try/catch: se o redis cair o login falha msm. sessao que
+    // nasce fora dessa lista n aparece pro invalidarSessoes depois, ai trocar a
+    // senha n derrubava ela. o guard tb ja depende do redis pra ler a denylist
     await this.redis.eval(
       REGISTER_SESSION_SCRIPT,
       [activeSessionsKey(vinculo.id)],
       [jti, SESSION_TTL_SECONDS],
     );
+    // devolve o payload tb pq o cookie é httpOnly, o front n consegue ler o jwt
     return { token, user: payload };
   }
 }

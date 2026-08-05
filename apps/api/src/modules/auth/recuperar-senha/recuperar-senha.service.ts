@@ -18,6 +18,7 @@ import { RedisService } from '../../../core/redis/redis.service';
 const TOKEN_TTL_MS = 15 * 60 * 1000;
 const RATE_LIMIT_TTL_SECONDS = 15 * 60;
 const RATE_LIMIT_MAX_REQUESTS = 3;
+const RATE_LIMIT_MAX_POR_IP = 10;
 const RATE_LIMIT_SCRIPT = `
 local total = redis.call('INCR', KEYS[1])
 if total == 1 then
@@ -165,11 +166,24 @@ export class RecuperarSenhaService {
   private async verificarLimite(identificador: string, ip: string) {
     const identificadorHash = this.criarHash(identificador);
     const ipHash = this.criarHash(ip || 'desconhecido');
-    const total = await this.incrementarContador(
-      `auth:recuperacao:${identificadorHash}:${ipHash}`,
-    );
 
-    if (total > RATE_LIMIT_MAX_REQUESTS) {
+    // dois limites: um por identificador digitado (segura insistencia na mesma
+    // conta) e um teto por ip. sem o teto, bastava trocar o usuario/email a cada
+    // request pra mandar solicitacao infinita da mesma origem
+    await this.aplicarLimite(
+      `auth:recuperacao:${identificadorHash}:${ipHash}`,
+      RATE_LIMIT_MAX_REQUESTS,
+    );
+    await this.aplicarLimite(
+      `auth:recuperacao:ip:${ipHash}`,
+      RATE_LIMIT_MAX_POR_IP,
+    );
+  }
+
+  private async aplicarLimite(chave: string, maximo: number) {
+    const total = await this.incrementarContador(chave);
+
+    if (total > maximo) {
       throw new HttpException(
         'Limite de solicitações de recuperação excedido.',
         HttpStatus.TOO_MANY_REQUESTS,

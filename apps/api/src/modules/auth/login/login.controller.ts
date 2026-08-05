@@ -25,6 +25,8 @@ export class LoginController {
     const { token, user } = await this.loginService.login(dto);
 
     res.set('Cache-Control', 'no-store');
+    // o next chama esse endpoint server-to-server (server action) e le o cookie
+    // do header Set-Cookie pra setar o dele mesmo. o token nunca vai no body
     res.cookie('session', token, {
       httpOnly: true,
       secure: true,

@@ -21,7 +21,7 @@ import { RecuperarSenhaService } from './recuperar-senha.service';
 export class RecuperarSenhaController {
   constructor(private readonly recuperarSenhaService: RecuperarSenhaService) {}
 
-  @Post('recupera-senha')
+  @Post('recuperar-senha')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   solicitar(@Body() dto: RecuperarSenhaDto, @Ip() ip: string) {
