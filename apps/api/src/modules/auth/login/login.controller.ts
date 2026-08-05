@@ -13,7 +13,7 @@ export class LoginController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<Omit<CurrentUserPayload, 'jti'>> {
+  ): Promise<Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'>> {
     const { token, user } = await this.loginService.login(dto);
 
     res.set('Cache-Control', 'no-store');
