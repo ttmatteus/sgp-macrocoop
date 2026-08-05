@@ -23,19 +23,26 @@ export class AlterarSenhaService {
                 },
             });
             
-            //Verifica se o vinculo existe e caso não exista lançar NotFoundException.
+            //Verifica se o vínculo existe, caso não lança NotFoundException
             if (!vinculo) {
-                throw new NotFoundException('Vinculo não encontrado');
+                throw new NotFoundException('Vínculo não encontrado');
+            }
+
+            //Verifica se o vínculo está ativo
+            if (vinculo.status !== 'ativo') {
+                throw new UnauthorizedException(
+                    'O vínculo está inativo.',
+                    );
             }
 
             // Validar se a senha atual informada está valida.
-            const senhaCorreta = await argon2.verify(
+            const senhaAtualValida = await argon2.verify(
                 vinculo.senha_hash,
                 dto.senhaAtual,
             );
 
             // Se senha estiver incorreta lançar UnauthorizedException
-            if (!senhaCorreta){
+            if (!senhaAtualValida){
                 throw new UnauthorizedException('A senha está incorreta.');
             }
             
