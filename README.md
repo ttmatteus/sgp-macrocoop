@@ -10,21 +10,17 @@ pnpm install
 
 Isso já instala tudo e gera o Prisma Client automaticamente (via `postinstall`).
 
-Depois, copie `apps/api/.env.example` para `apps/api/.env` e preencha `DATABASE_URL` e `DIRECT_URL` com as credenciais do Supabase 
+Depois, copie `apps/api/.env.example` para `apps/api/.env` e preencha `DATABASE_URL` e `DIRECT_URL` com as credenciais do Supabase. Copie tb `apps/web/.env.example` pra `apps/web/.env.local`.
 
 ## Rodando
 
 ```sh
-pnpm api
+pnpm dev
 ```
 
-Sobe a API em `http://localhost:3000/api`.
+Sobe a API (`http://localhost:3000/api`) e o web (`http://localhost:3001`) juntos, em paralelo.
 
-```sh
-pnpm web
-```
-
-Sobe o front em `http://localhost:3000` (ou na próxima porta livre, se a API já estiver rodando).
+Se quiser subir só um dos dois: `pnpm api` ou `pnpm web`.
 
 ## API em teste
 

@@ -48,4 +48,5 @@ model vinculo_cooperativa {
 
   @@index([login], map: "idx_vinculo_login")
   @@index([matricula], map: "idx_vinculo_matricula")
+  @@index([token_redefinicao], map: "idx_vinculo_token_redefinicao")
 }
