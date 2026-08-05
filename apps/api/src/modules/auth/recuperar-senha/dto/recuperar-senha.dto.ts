@@ -2,11 +2,10 @@ import {
   IsEmail,
   IsNotEmpty,
   IsString,
-  Matches,
   MaxLength,
-  MinLength,
   ValidateIf,
 } from 'class-validator';
+import { IsSenhaValida } from '../../../../common/validators/senha.validator';
 
 export class RecuperarSenhaDto {
   @ValidateIf((dto: RecuperarSenhaDto) => !dto.email)
@@ -32,9 +31,6 @@ export class RedefinirSenhaDto {
   @IsNotEmpty()
   token!: string;
 
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d).+$/)
+  @IsSenhaValida()
   senha!: string;
 }

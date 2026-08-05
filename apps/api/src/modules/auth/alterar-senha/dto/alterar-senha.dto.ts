@@ -1,18 +1,11 @@
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
+import { IsSenhaValida } from '../../../../common/validators/senha.validator';
 
 export class AlterarSenhaDto {
     @IsString()
     @IsNotEmpty()
     senhaAtual!: string;
 
-    @IsString()
-    @IsNotEmpty()
-    @MinLength(8, {
-        message: 'A senha deve possuir no mínimo 8 caracteres.',
-    })
-    @MaxLength(72, {
-        message: 'A senha deve possuir no máximo 72 caracteres.',
-    })
+    @IsSenhaValida()
     senhaNova!: string;
-
 }
