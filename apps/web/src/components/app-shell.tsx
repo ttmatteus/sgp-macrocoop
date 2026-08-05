@@ -10,6 +10,8 @@ import { DashboardPanel } from '@/components/dashboard/dashboard-panel'
 import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
+import type { Perfil } from '@/lib/perfil'
+import type { SessionUser } from '@/lib/session'
 
 const bottomNav = [
   { label: 'Início', icon: Home, href: '/dashboard' },
@@ -34,7 +36,17 @@ const posicaoPorTela: Record<Tela, string> = {
   ajustes: '-200%',
 }
 
-export function AppShell({ nome, children }: { nome: string; children: React.ReactNode }) {
+export function AppShell({
+  nome,
+  nivel,
+  perfil,
+  children,
+}: {
+  nome: string
+  nivel: SessionUser['nivel']
+  perfil: Perfil | null
+  children: React.ReactNode
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const trackRef = useRef<HTMLDivElement>(null)
@@ -133,7 +145,12 @@ export function AppShell({ nome, children }: { nome: string; children: React.Rea
           <DashboardPanel nome={nome} onSair={pedirConfirmacaoSaida} />
         </div>
         <div className="h-full w-1/3 shrink-0">
-          <PerfilPanel onSair={pedirConfirmacaoSaida} />
+          <PerfilPanel
+            nome={nome}
+            nivel={nivel}
+            perfil={perfil}
+            onSair={pedirConfirmacaoSaida}
+          />
         </div>
         <div className="h-full w-1/3 shrink-0">
           <AjustesPanel onAlterarSenha={handleAlterarSenha} onSair={pedirConfirmacaoSaida} />

@@ -13,6 +13,22 @@ import {
   User,
   HelpCircle,
 } from 'lucide-react'
+import type { Perfil } from '@/lib/perfil'
+import type { SessionUser } from '@/lib/session'
+
+// a api manda a data como ISO em UTC (ex: 2022-01-10T00:00:00.000Z). sem forcar
+// timeZone UTC aqui o fuso do brasil puxava pro dia anterior
+const formatarData = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—'
+
+const iniciais = (nome: string) =>
+  nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
 
 const acoes = [
   { label: 'Dados Pessoais', icon: User, href: null },
@@ -22,7 +38,20 @@ const acoes = [
   { label: 'Ajuda', icon: HelpCircle, href: null },
 ]
 
-export function PerfilPanel({ onSair }: { onSair: () => void }) {
+export function PerfilPanel({
+  nome,
+  nivel,
+  perfil,
+  onSair,
+}: {
+  nome: string
+  nivel: SessionUser['nivel']
+  perfil: Perfil | null
+  onSair: () => void
+}) {
+  // o nome do jwt serve de reserva se a api n responder
+  const nomeExibido = perfil?.nome ?? nome
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Header com organic wave */}
@@ -52,11 +81,11 @@ export function PerfilPanel({ onSair }: { onSair: () => void }) {
         {/* Card de usuário */}
         <section className="relative mt-8 flex shrink-0 flex-col items-center rounded-2xl border border-border bg-card p-4 pb-5 shadow-sm">
           <span className="absolute -top-12 flex size-24 items-center justify-center rounded-full border-4 border-card bg-muted text-2xl font-bold text-foreground shadow-sm">
-            RS
+            {iniciais(nomeExibido)}
           </span>
           <div className="mt-12 flex flex-col items-center">
-            <h2 className="text-base font-semibold">Ricardo Silva</h2>
-            <p className="text-sm text-muted-foreground">Cooperado</p>
+            <h2 className="text-base font-semibold">{nomeExibido}</h2>
+            <p className="text-sm text-muted-foreground capitalize">{nivel}</p>
             <div className="mt-3 flex items-center gap-1.5 rounded-full bg-secondary px-4 py-1 text-xs font-semibold text-secondary-foreground">
               <span className="size-2 rounded-full bg-primary" />
               Ativo
@@ -69,12 +98,12 @@ export function PerfilPanel({ onSair }: { onSair: () => void }) {
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <IdCard className="size-5 text-primary" />
             <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Matrícula</p>
-            <p className="text-sm font-semibold">99999</p>
+            <p className="text-sm font-semibold">{perfil?.matricula ?? '—'}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <Building className="size-5 text-primary" />
             <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Cooperativa</p>
-            <p className="text-sm font-semibold">Macrocoop</p>
+            <p className="text-sm font-semibold">{perfil?.cooperativa ?? '—'}</p>
           </div>
           <div className="col-span-2 rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -83,7 +112,9 @@ export function PerfilPanel({ onSair }: { onSair: () => void }) {
               </span>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Data de Admissão</p>
-                <p className="text-sm font-semibold">10/01/2022</p>
+                <p className="text-sm font-semibold">
+                  {formatarData(perfil?.dataAdmissao ?? null)}
+                </p>
               </div>
             </div>
           </div>
