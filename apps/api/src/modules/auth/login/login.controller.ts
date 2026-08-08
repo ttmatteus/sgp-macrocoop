@@ -5,10 +5,12 @@ import {
   HttpStatus,
   Post,
   Res,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUserPayload } from '../../../core/auth/current-user.interface';
 import { SESSION_TTL_SECONDS } from '../../../core/auth/session.constants';
+import { LoginRateLimitInterceptor } from '../../../common/interceptors/login-rate-limit.interceptor';
 import { LoginDto } from './dto/login.dto';
 import { LoginService } from './login.service';
 
@@ -18,6 +20,7 @@ export class LoginController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @UseInterceptors(LoginRateLimitInterceptor)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
