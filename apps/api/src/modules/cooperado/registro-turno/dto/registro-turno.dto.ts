@@ -37,6 +37,8 @@ export class RegistrarPontoDto {
 
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
+  @Max(100000)
   precisaoM!: number;
 }
 
@@ -69,6 +71,20 @@ export class ContratoDisponivelDto {
 
   @Expose()
   locais!: LocalPontoDto[];
+}
+
+export class TurnoAbertoDto {
+  @Expose()
+  id!: number;
+
+  @Expose()
+  contratoId!: number;
+
+  @Expose()
+  contratoNome!: string;
+
+  @Expose()
+  iniciadoEm!: Date;
 }
 
 export class RegistroPontoDto {
