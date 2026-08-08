@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { gsap } from 'gsap'
 import { IdCard, Lock, HelpCircle, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -235,6 +236,15 @@ export function LoginPanel() {
               'Entrar'
             )}
           </SplashButton>
+
+          <p className="text-center text-sm">
+            <Link
+              href="/recuperar-senha"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </p>
         </div>
       </div>
 

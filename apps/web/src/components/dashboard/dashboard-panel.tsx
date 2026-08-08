@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { logout } from '@/app/dashboard/actions'
-import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
   Archive,
@@ -139,32 +137,19 @@ function iniciais(nome: string) {
     .toUpperCase()
 }
 
-export function DashboardPanel({ nome }: { nome: string }) {
+export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => void }) {
   const router = useRouter()
   const [fabAberto, setFabAberto] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [notifAberto, setNotifAberto] = useState(false)
-  const [saindo, setSaindo] = useState(false)
-  const [confirmandoSaida, setConfirmandoSaida] = useState(false)
 
   const pedirConfirmacaoSaida = () => {
     setMenuAberto(false)
-    setConfirmandoSaida(true)
-  }
-
-  const confirmarSaida = async () => {
-    setConfirmandoSaida(false)
-    setSaindo(true)
-    await logout()
-    setTimeout(() => router.push('/login'), 1800)
-  }
-
-  if (saindo) {
-    return <LogoutScreen />
+    onSair()
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* TopAppBar */}
       <header className="flex h-14 shrink-0 items-center justify-between bg-background px-5">
         <div className="flex items-center gap-3">
@@ -388,31 +373,7 @@ export function DashboardPanel({ nome }: { nome: string }) {
         </button>
       </div>
 
-      {/* BottomNav */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around rounded-t-2xl border-t border-border bg-card px-3 pb-4 pt-2 shadow-lg">
-        <button className="flex flex-col items-center gap-0.5 rounded-xl bg-primary/12 px-4 py-1.5 text-[11px] font-medium text-primary">
-          <Home className="size-5" />
-          Início
-        </button>
-        <button disabled className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground/50">
-          <History className="size-5" />
-          Histórico
-        </button>
-        <button
-          onClick={() => router.push('/perfil')}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-primary"
-        >
-          <User className="size-5" />
-          Perfil
-        </button>
-        <button
-          onClick={() => router.push('/perfil/ajustes')}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-primary"
-        >
-          <Settings className="size-5" />
-          Ajustes
-        </button>
-      </nav>
+      {/* BottomNav agora é compartilhado, vem do AppShell (trilha dashboard/perfil/ajustes) */}
 
       {menuAberto && <div onClick={() => setMenuAberto(false)} className="fixed inset-0 z-40 bg-foreground/30" />}
 
@@ -471,35 +432,7 @@ export function DashboardPanel({ nome }: { nome: string }) {
         </button>
       </div>
 
-      {/* Confirmação de saída */}
-      {confirmandoSaida && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 px-6">
-          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 text-center shadow-2xl">
-            <div className="mx-auto flex size-16 items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element -- gif animado, o next/image tira a animação */}
-              <img src="/face-triste.gif" alt="" className="size-full object-contain" />
-            </div>
-            <p className="mt-1 text-base font-semibold text-foreground">Sair da conta?</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Você vai precisar entrar de novo pra acessar o SGP.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                onClick={() => setConfirmandoSaida(false)}
-                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarSaida}
-                className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirmação de saída fica no AppShell agora, é compartilhada com perfil/ajustes */}
     </div>
   )
 }

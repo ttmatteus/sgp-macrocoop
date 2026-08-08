@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -14,6 +15,8 @@ model cooperativa {
   nome                String                @db.VarChar(255)
   tipo_cooperativa    String                @db.VarChar(50)
   logo                String?
+  contrato            contrato[]
+  folha_producao      folha_producao[]
   vinculo_cooperativa vinculo_cooperativa[]
 }
 
@@ -31,21 +34,185 @@ model pessoa {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model vinculo_cooperativa {
-  id                          Int         @id @default(autoincrement())
+  id                          Int              @id @default(autoincrement())
   pessoa_id                   Int
   cooperativa_id              Int
-  matricula                   String      @unique @db.VarChar(20)
-  login                       String      @unique @db.VarChar(100)
+  matricula                   String           @unique @db.VarChar(20)
+  login                       String           @unique @db.VarChar(100)
   senha_hash                  String
-  status                      String      @default("ativo") @db.VarChar(20)
-  data_admissao               DateTime    @db.Date
-  data_desligamento           DateTime?   @db.Date
-  coordenador                 Boolean     @default(false)
+  status                      String           @default("ativo") @db.VarChar(20)
+  data_admissao               DateTime         @db.Date
+  data_desligamento           DateTime?        @db.Date
+  coordenador                 Boolean          @default(false)
   token_redefinicao           String?
-  token_redefinicao_expira_em DateTime?   @db.Timestamptz(6)
-  cooperativa                 cooperativa @relation(fields: [cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  pessoa                      pessoa      @relation(fields: [pessoa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  token_redefinicao_expira_em DateTime?        @db.Timestamptz(6)
+  alocacao                    alocacao[]
+  folha_producao              folha_producao[]
+  registro_ponto              registro_ponto[]
+  turno                       turno?
+  cooperativa                 cooperativa      @relation(fields: [cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pessoa                      pessoa           @relation(fields: [pessoa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([login], map: "idx_vinculo_login")
   @@index([matricula], map: "idx_vinculo_matricula")
+  @@index([token_redefinicao], map: "idx_vinculo_token_redefinicao")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model folha_producao {
+  id                     Int                 @id @default(autoincrement())
+  vinculo_cooperativa_id Int
+  cooperativa_id         Int
+  ano                    Int                 @db.SmallInt
+  mes                    Int                 @db.SmallInt
+  producao_base          Decimal             @db.Decimal(10, 2)
+  rsr                    Decimal             @db.Decimal(10, 2)
+  rsr_percentual         Decimal             @db.Decimal(7, 6)
+  adicionais             Decimal             @default(0) @db.Decimal(10, 2)
+  inss_desconto          Decimal             @db.Decimal(10, 2)
+  irrf_desconto          Decimal             @db.Decimal(10, 2)
+  total                  Decimal             @db.Decimal(10, 2)
+  mensagens              Json?
+  fechada_em             DateTime            @default(now()) @db.Timestamptz(6)
+  cooperativa            cooperativa         @relation(fields: [cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vinculo_cooperativa    vinculo_cooperativa @relation(fields: [vinculo_cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([vinculo_cooperativa_id, ano, mes], map: "folha_producao_competencia_unica")
+  @@index([cooperativa_id, ano, mes], map: "folha_producao_cooperativa_competencia_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model faixa_inss {
+  id              Int       @id @default(autoincrement())
+  valor_minimo    Decimal   @db.Decimal(10, 2)
+  valor_maximo    Decimal?  @db.Decimal(10, 2)
+  aliquota        Decimal   @db.Decimal(5, 4)
+  parcela_deduzir Decimal   @default(0) @db.Decimal(10, 2)
+  vigencia_inicio DateTime  @db.Date
+  vigencia_fim    DateTime? @db.Date
+
+  @@unique([vigencia_inicio, valor_minimo], map: "faixa_inss_unica")
+  @@index([vigencia_inicio], map: "faixa_inss_vigencia_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model faixa_irrf {
+  id              Int       @id @default(autoincrement())
+  valor_minimo    Decimal   @db.Decimal(10, 2)
+  valor_maximo    Decimal?  @db.Decimal(10, 2)
+  aliquota        Decimal   @db.Decimal(5, 4)
+  deducao         Decimal   @default(0) @db.Decimal(10, 2)
+  vigencia_inicio DateTime  @db.Date
+  vigencia_fim    DateTime? @db.Date
+
+  @@unique([vigencia_inicio, valor_minimo], map: "faixa_irrf_unica")
+  @@index([vigencia_inicio], map: "faixa_irrf_vigencia_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model alocacao {
+  id                     Int                 @id @default(autoincrement())
+  vinculo_cooperativa_id Int
+  contrato_id            Int
+  data_inicio            DateTime            @db.Date
+  data_fim               DateTime?           @db.Date
+  contrato               contrato            @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vinculo_cooperativa    vinculo_cooperativa @relation(fields: [vinculo_cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([vinculo_cooperativa_id, contrato_id, data_inicio], map: "alocacao_unica")
+  @@index([contrato_id], map: "alocacao_contrato_idx")
+  @@index([vinculo_cooperativa_id, data_fim], map: "alocacao_vinculo_idx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contrato {
+  id             Int              @id @default(autoincrement())
+  cooperativa_id Int
+  nome           String           @db.VarChar(255)
+  codigo         String           @db.VarChar(50)
+  ativo          Boolean          @default(true)
+  alocacao       alocacao[]
+  cooperativa    cooperativa      @relation(fields: [cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  local_ponto    local_ponto[]
+  registro_ponto registro_ponto[]
+  turno          turno[]
+
+  @@unique([cooperativa_id, codigo], map: "contrato_codigo_unico")
+  @@index([cooperativa_id, ativo], map: "contrato_cooperativa_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model local_ponto {
+  id             Int              @id @default(autoincrement())
+  contrato_id    Int
+  nome           String           @db.VarChar(255)
+  latitude       Decimal          @db.Decimal(10, 8)
+  longitude      Decimal          @db.Decimal(11, 8)
+  raio_m         Int              @default(500)
+  ativo          Boolean          @default(true)
+  contrato       contrato         @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  registro_ponto registro_ponto[]
+
+  @@index([contrato_id, ativo], map: "local_ponto_contrato_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model registro_ponto {
+  id                                                    Int                 @id @default(autoincrement())
+  vinculo_cooperativa_id                                Int
+  contrato_id                                           Int
+  local_ponto_id                                        Int?
+  id_cliente                                            String              @db.Uuid
+  tipo                                                  String              @db.VarChar(10)
+  registrado_em                                         DateTime            @db.Timestamptz(6)
+  recebido_em                                           DateTime            @default(now()) @db.Timestamptz(6)
+  latitude                                              Decimal             @db.Decimal(10, 8)
+  longitude                                             Decimal             @db.Decimal(11, 8)
+  precisao_m                                            Decimal             @db.Decimal(8, 2)
+  endereco_reverso                                      String?             @db.VarChar(255)
+  distancia_contrato_m                                  Decimal?            @db.Decimal(10, 2)
+  status_localizacao                                    String?             @db.VarChar(20)
+  origem                                                String              @default("online") @db.VarChar(20)
+  score_fraude                                          Int?                @db.SmallInt
+  score_calculado_em                                    DateTime?           @db.Timestamptz(6)
+  contrato                                              contrato            @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  local_ponto                                           local_ponto?        @relation(fields: [local_ponto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vinculo_cooperativa                                   vinculo_cooperativa @relation(fields: [vinculo_cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  turno_turno_registro_ponto_entrada_idToregistro_ponto turno?              @relation("turno_registro_ponto_entrada_idToregistro_ponto")
+  turno_turno_registro_ponto_saida_idToregistro_ponto   turno?              @relation("turno_registro_ponto_saida_idToregistro_ponto")
+
+  @@unique([vinculo_cooperativa_id, id_cliente], map: "registro_ponto_idempotencia")
+  @@index([contrato_id, registrado_em(sort: Desc)], map: "registro_ponto_contrato_idx")
+  @@index([vinculo_cooperativa_id, registrado_em(sort: Desc)], map: "registro_ponto_vinculo_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model turno {
+  id                                                             Int                 @id @default(autoincrement())
+  vinculo_cooperativa_id                                         Int                 @unique(map: "turno_um_aberto_por_vinculo", where: raw("(registro_ponto_saida_id IS NULL)"))
+  contrato_id                                                    Int
+  registro_ponto_entrada_id                                      Int                 @unique(map: "turno_entrada_unica")
+  registro_ponto_saida_id                                        Int?                @unique(map: "turno_saida_unica")
+  iniciado_em                                                    DateTime            @db.Timestamptz(6)
+  encerrado_em                                                   DateTime?           @db.Timestamptz(6)
+  status                                                         String              @default("aberto") @db.VarChar(20)
+  contrato                                                       contrato            @relation(fields: [contrato_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  registro_ponto_turno_registro_ponto_entrada_idToregistro_ponto registro_ponto      @relation("turno_registro_ponto_entrada_idToregistro_ponto", fields: [registro_ponto_entrada_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  registro_ponto_turno_registro_ponto_saida_idToregistro_ponto   registro_ponto?     @relation("turno_registro_ponto_saida_idToregistro_ponto", fields: [registro_ponto_saida_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vinculo_cooperativa                                            vinculo_cooperativa @relation(fields: [vinculo_cooperativa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([contrato_id, iniciado_em(sort: Desc)], map: "turno_contrato_idx")
+  @@index([vinculo_cooperativa_id, iniciado_em(sort: Desc)], map: "turno_vinculo_idx")
 }
