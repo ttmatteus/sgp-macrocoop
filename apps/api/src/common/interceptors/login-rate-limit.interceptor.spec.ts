@@ -8,7 +8,7 @@ const TOO_MANY = { status: HttpStatus.TOO_MANY_REQUESTS };
 
 describe('LoginRateLimitInterceptor', () => {
   let interceptor: LoginRateLimitInterceptor;
-  let redis: { get: jest.Mock; incr: jest.Mock; expire: jest.Mock; del: jest.Mock };
+  let redis: { get: jest.Mock; incr: jest.Mock; expire: jest.Mock; del: jest.Mock; ttl: jest.Mock };
 
   const mockCtx = (body: Record<string, unknown> = { usuario: 'andrei' }): ExecutionContext =>
     ({
@@ -31,6 +31,7 @@ describe('LoginRateLimitInterceptor', () => {
       incr: jest.fn(),
       expire: jest.fn(),
       del: jest.fn(),
+      ttl: jest.fn().mockResolvedValue(900),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -122,5 +123,49 @@ describe('LoginRateLimitInterceptor', () => {
     ).rejects.toBe(erroGenerico);
 
     expect(redis.incr).not.toHaveBeenCalled();
+  });
+
+  it('mantém a contagem do INCR mesmo quando o EXPIRE falha (não mascara um INCR válido)', async () => {
+    redis.get.mockResolvedValue(null);
+    redis.incr.mockResolvedValue(1);
+    redis.expire.mockRejectedValue(new Error('upstash down'));
+
+    await expect(
+      lastValueFrom(interceptor.intercept(mockCtx(), handler(null, new UnauthorizedException()))),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(redis.incr).toHaveBeenCalled();
+    expect(redis.expire).toHaveBeenCalled();
+  });
+
+  it('devolve o retry-after (TTL da chave) no corpo do 429 ao bloquear antes do handler', async () => {
+    redis.get.mockResolvedValue('5');
+    redis.ttl.mockResolvedValue(573);
+
+    try {
+      await lastValueFrom(interceptor.intercept(mockCtx(), handler({ ok: true })));
+      fail('deveria ter lançado');
+    } catch (err) {
+      expect(err).toMatchObject(TOO_MANY);
+      expect((err as { getResponse: () => unknown }).getResponse()).toMatchObject({
+        retryAfter: 573,
+      });
+    }
+  });
+
+  it('devolve a janela cheia como retry-after quando o TTL falha ou não existe', async () => {
+    redis.get.mockResolvedValue('4');
+    redis.incr.mockResolvedValue(5);
+    redis.expire.mockResolvedValue(1);
+    redis.ttl.mockResolvedValue(-2);
+
+    try {
+      await lastValueFrom(interceptor.intercept(mockCtx(), handler(null, new UnauthorizedException())));
+      fail('deveria ter lançado');
+    } catch (err) {
+      expect((err as { getResponse: () => unknown }).getResponse()).toMatchObject({
+        retryAfter: 900,
+      });
+    }
   });
 });

@@ -16,7 +16,11 @@ const MAX_ATTEMPTS = 5;
 const WINDOW_SECONDS = 900;
 
 // 429 Too Many Requests — essa versão do NestJS não tem a exception pronta
-const tooManyRequests = () => new HttpException('Too Many Requests', HttpStatus.TOO_MANY_REQUESTS);
+const tooManyRequests = (retryAfterSeconds: number) =>
+  new HttpException(
+    { message: 'Too Many Requests', retryAfter: retryAfterSeconds },
+    HttpStatus.TOO_MANY_REQUESTS,
+  );
 
 /**
  * Trava força bruta no POST /login.
@@ -63,33 +67,52 @@ export class LoginRateLimitInterceptor implements NestInterceptor {
     );
   }
 
-  // joga 429 se já estourou; engole erro de Redis (deixa passar)
-  private async assertNotBlocked(key: string): Promise<void> {
+  private async getCountSafely(key: string): Promise<number> {
     try {
-      const count = Number(await this.redis.get(key)) || 0;
-      if (count >= MAX_ATTEMPTS) {
-        throw tooManyRequests();
-      }
+      return Number(await this.redis.get(key)) || 0;
     } catch (err) {
-      if (err instanceof HttpException && err.getStatus() === HttpStatus.TOO_MANY_REQUESTS) {
-        throw err;
-      }
       this.logger.error(`Redis GET falhou pra chave ${key}`, err);
+      return 0;
     }
   }
 
-  // INCR na falha; EXPIRE só na 1ª (janela fixa, não renova). Retorna a nova contagem.
-  private async recordFailure(key: string): Promise<number> {
+  // TTL restante da chave pro retry-after do 429; sem TTL valido, usa a janela cheia
+  private async getRetryAfterSafely(key: string): Promise<number> {
     try {
-      const n = await this.redis.incr(key);
-      if (n === 1) {
-        await this.redis.expire(key, WINDOW_SECONDS);
-      }
-      return n;
+      const ttl = await this.redis.ttl(key);
+      return ttl > 0 ? ttl : WINDOW_SECONDS;
+    } catch (err) {
+      this.logger.error(`Redis TTL falhou pra chave ${key}`, err);
+      return WINDOW_SECONDS;
+    }
+  }
+
+  private async assertNotBlocked(key: string): Promise<void> {
+    const count = await this.getCountSafely(key);
+    if (count >= MAX_ATTEMPTS) {
+      throw tooManyRequests(await this.getRetryAfterSafely(key));
+    }
+  }
+
+  // INCR e EXPIRE em try/catch separados: se o EXPIRE falhar depois de um
+  // INCR valido, a contagem continua correta (so fica sem ttl nessa falha
+  // especifica, em vez do catch mascarar um INCR que ja tinha dado certo)
+  private async recordFailure(key: string): Promise<number> {
+    let n: number;
+    try {
+      n = await this.redis.incr(key);
     } catch (err) {
       this.logger.error(`Redis INCR falhou pra chave ${key}`, err);
       return 0;
     }
+    if (n === 1) {
+      try {
+        await this.redis.expire(key, WINDOW_SECONDS);
+      } catch (err) {
+        this.logger.error(`Redis EXPIRE falhou pra chave ${key}`, err);
+      }
+    }
+    return n;
   }
 
   private async reset(key: string): Promise<void> {
@@ -107,7 +130,9 @@ export class LoginRateLimitInterceptor implements NestInterceptor {
     return from(this.recordFailure(key)).pipe(
       switchMap((n) =>
         n >= MAX_ATTEMPTS
-          ? throwError(() => tooManyRequests())
+          ? from(this.getRetryAfterSafely(key)).pipe(
+              switchMap((retryAfter) => throwError(() => tooManyRequests(retryAfter))),
+            )
           : throwError(() => err),
       ),
     );
