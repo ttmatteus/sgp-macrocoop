@@ -9,7 +9,18 @@ module.exports = {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     }),
   },
-  externals: [{ argon2: 'commonjs argon2' }],
+  externals: [
+    { argon2: 'commonjs argon2' },
+    // @nestjs/microservices importa todos os transportes (grpc, kafka, mqtt...)
+    // mesmo so usando RMQ. sem isso o webpack tenta empacotar tudo
+    { '@grpc/grpc-js': 'commonjs @grpc/grpc-js' },
+    { '@grpc/proto-loader': 'commonjs @grpc/proto-loader' },
+    { '@nestjs/websockets/socket-module': 'commonjs @nestjs/websockets/socket-module' },
+    { ioredis: 'commonjs ioredis' },
+    { kafkajs: 'commonjs kafkajs' },
+    { mqtt: 'commonjs mqtt' },
+    { nats: 'commonjs nats' },
+  ],
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
