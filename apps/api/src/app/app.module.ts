@@ -7,6 +7,7 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { CooperadoModule } from '../modules/cooperado/cooperado.module';
 import { PrismaModule } from '../core/prisma/prisma.module';
 import { RedisModule } from '../core/redis/redis.module';
+import { RabbitmqModule } from '../core/rabbitmq/rabbitmq.module';
 import { AuthCoreModule } from '../core/auth/auth-core.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { AuthCoreModule } from '../core/auth/auth-core.module';
     ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
+    RabbitmqModule,
     AuthCoreModule,
     AuthModule,
     CooperadoModule,
