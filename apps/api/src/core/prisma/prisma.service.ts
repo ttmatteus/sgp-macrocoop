@@ -9,7 +9,10 @@ export class PrismaService
 {
   constructor() {
     super({
-      adapter: new PrismaPg({ connectionString: process.env['DATABASE_URL'] }),
+      adapter: new PrismaPg({ connectionString: process.env['DATABASE_URL'], max: 35 }),
+      // maxWait default (2s) estourava em rajada (P2028), preferimos esperar
+      // mais a chegar 500 pro cliente
+      transactionOptions: { maxWait: 10000, timeout: 15000 },
     });
   }
 
