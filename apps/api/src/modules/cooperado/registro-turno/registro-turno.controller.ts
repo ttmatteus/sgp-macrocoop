@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { RegistroTurnoService } from './registro-turno.service';
 import { RegistrarPontoDto } from './dto/registro-turno.dto';
@@ -48,5 +58,19 @@ export class RegistroTurnoController {
     const { dto, criado } = await this.registroTurnoService.registrar(user.vinculoId, dados);
     res.status(criado ? HttpStatus.CREATED : HttpStatus.OK);
     return dto;
+  }
+
+  // dev preview: limpa turno + registros do usuario logado pra retestar o fluxo
+  // do zero. liberado so pro login em DEV_PREVIEW_LOGIN, nao por NODE_ENV, pra
+  // dar pra demonstrar o app rodando em producao sem expor pra usuario real
+  @UseGuards(JwtAuthGuard)
+  @Post('dev/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetDev(@CurrentUser() user: CurrentUserPayload): Promise<void> {
+    const permitido = process.env.DEV_PREVIEW_LOGIN;
+    if (!permitido || user.login !== permitido) {
+      throw new ForbiddenException();
+    }
+    await this.registroTurnoService.resetParaTestes(user.vinculoId);
   }
 }

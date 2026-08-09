@@ -7,7 +7,9 @@
     "postinstall": "pnpm --filter @org/api exec prisma generate",
     "api": "nx serve @org/api",
     "web": "nx dev @org/web --port=3001",
-    "dev": "concurrently -n api,web -c blue,green \"pnpm api\" \"pnpm web\""
+    "web:https": "nx dev @org/web --port=3001 --experimental-https --experimental-https-key=./certificates/localhost-key.pem --experimental-https-cert=./certificates/localhost.pem",
+    "dev": "concurrently -n api,web -c blue,green \"pnpm api\" \"pnpm web\"",
+    "dev:https": "concurrently -n api,web -c blue,green \"pnpm api\" \"pnpm web:https\""
   },
   "private": true,
   "devDependencies": {
