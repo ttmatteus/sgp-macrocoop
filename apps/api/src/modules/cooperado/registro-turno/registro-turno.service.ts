@@ -327,6 +327,15 @@ export class RegistroTurnoService {
     };
   }
 
+  // dev only: apaga turno + registro_ponto do vinculo pra poder retestar o
+  // fluxo do zero sem precisar mexer no banco na mao. controller ja barra em producao
+  async resetParaTestes(vinculoId: number): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.turno.deleteMany({ where: { vinculo_cooperativa_id: vinculoId } }),
+      this.prisma.registro_ponto.deleteMany({ where: { vinculo_cooperativa_id: vinculoId } }),
+    ]);
+  }
+
   private async buscarTurnoDoRegistro(registroPontoId: number) {
     return this.prisma.turno.findFirst({
       where: {
