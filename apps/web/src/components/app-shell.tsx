@@ -11,6 +11,7 @@ import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
 import type { Perfil } from '@/lib/perfil'
+import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
 import type { SessionUser } from '@/lib/session'
 
 const bottomNav = [
@@ -40,11 +41,15 @@ export function AppShell({
   nome,
   nivel,
   perfil,
+  turnoAberto,
+  modoDev,
   children,
 }: {
   nome: string
   nivel: SessionUser['nivel']
   perfil: Perfil | null
+  turnoAberto: TurnoAberto | null
+  modoDev: boolean
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -69,13 +74,15 @@ export function AppShell({
   // alterar-senha n é aba da trilha, é navegação pra frente, ai n renderiza a
   // trilha aqui pq o router já foi pra outra pagina
   const emAlterarSenha = pathname.startsWith('/perfil/ajustes/alterar-senha')
+  // ponto tb é navegação pra frente (tela cheia com voltar), n é aba da trilha
+  const emPonto = pathname.startsWith('/ponto')
   const tela: Tela = pathname === '/perfil/ajustes' ? 'ajustes' : pathname === '/perfil' ? 'perfil' : 'dashboard'
 
   useEffect(() => {
     // enquanto tá no alterar-senha a div da trilha nem existe no dom (ve o
     // return <>{children}</> ali embaixo). qnd volta ela remonta do zero sem
     // transform, entao conta como um "primeiro mount" de novo
-    if (emAlterarSenha) {
+    if (emAlterarSenha || emPonto) {
       montouRef.current = false
       return
     }
@@ -95,7 +102,7 @@ export function AppShell({
       duration: 0.5,
       ease: 'power2.inOut',
     })
-  }, [tela, emAlterarSenha])
+  }, [tela, emAlterarSenha, emPonto])
 
   // splash verde que expande do clique e revela o alterar-senha por baixo.
   // fica aqui fora da trilha (que o gsap transforma) e acima do navbar,
@@ -136,13 +143,19 @@ export function AppShell({
 
   // alterar-senha empilha (navegação pra frente), n é aba da trilha, só
   // renderiza o conteúdo real da rota aqui
-  if (emAlterarSenha) return <>{children}</>
+  if (emAlterarSenha || emPonto) return <>{children}</>
 
   return (
     <div ref={frameRef} className="relative h-dvh overflow-hidden bg-background">
       <div ref={trackRef} className="relative left-0 flex h-full w-[300%]">
         <div className="h-full w-1/3 shrink-0">
-          <DashboardPanel nome={nome} onSair={pedirConfirmacaoSaida} />
+          <DashboardPanel
+            nome={nome}
+            turnoAberto={turnoAberto}
+            onSair={pedirConfirmacaoSaida}
+            previewDevAtivo={tela === 'dashboard'}
+            modoDev={modoDev}
+          />
         </div>
         <div className="h-full w-1/3 shrink-0">
           <PerfilPanel

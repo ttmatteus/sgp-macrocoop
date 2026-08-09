@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
+import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
 import {
   Archive,
   Bell,
@@ -12,6 +13,9 @@ import {
   ChevronRight,
   ClipboardList,
   Clock,
+  LogIn,
+  Power,
+  UtensilsCrossed,
   FileText,
   FolderOpen,
   GraduationCap,
@@ -27,18 +31,23 @@ import {
   Plus,
   PartyPopper,
   Settings,
+  Sun,
+  Moon,
   User,
-  UtensilsCrossed,
   Vote,
   X,
 } from 'lucide-react'
 
-const acoesRapidas = [{ label: 'Bater Ponto', icon: Clock }, { label: 'Histórico', icon: History }]
+// href null = ainda nao tem tela (o botao fica desabilitado)
+const acoesRapidas = [
+  { label: 'Bater Ponto', icon: Clock, href: '/ponto' },
+  { label: 'Histórico', icon: History, href: null },
+]
 
 const menuLateral = [
   { label: 'Início', icon: Home, href: '/dashboard' },
   { label: 'Notificações', icon: Bell, href: null },
-  { label: 'Bater Ponto', icon: Clock, href: null },
+  { label: 'Bater Ponto', icon: Clock, href: '/ponto' },
   { label: 'SRT', icon: ClipboardList, href: null },
   { label: 'Histórico de Ponto', icon: History, href: null },
   { label: 'Minha Escala', icon: CalendarClock, href: null },
@@ -87,13 +96,59 @@ const historico: {
   },
 ]
 
-// estado fixo por enquanto, ainda n existe backend de ponto
-const estadoAtual = {
-  hint: 'Trabalhando agora',
-  cor: 'warning' as const,
-  heroImagem: '/telas/dashboard-coo-hero.jpg',
-  heroTempoLabel: 'Início da jornada',
-  heroTempoValor: '08:15',
+// rotulos, icones, cores e imagens vindos do ds-sgp (telas/dashboard-coo), os 4
+// estados originais. so os 2 primeiros vem de dado real hoje: nosso modelo nao
+// distingue "em almoço" de "turno aberto" (almoço e fechar um turno e abrir
+// outro, nao um estado dentro do turno), e "encerrar expediente" precisaria
+// saber o horario previsto (TipoTurno/escala, card de admin de outra sprint).
+// os outros 2 ficam so no seletor dev, pra bater visualmente com o DS
+const estadosPonto = {
+  semTurno: {
+    label: 'Registrar entrada',
+    hint: 'Jornada não iniciada',
+    icon: LogIn,
+    cor: 'success' as const,
+    heroImagem: '/telas/dia/dashboard-coo-hero-comeco.png',
+    heroImagemNoite: '/telas/noite/dashboard-coo-hero-comeco.png',
+    heroTempoLabel: 'Aguardando entrada',
+    heroTempoValor: '--:--',
+  },
+  comTurno: {
+    label: 'Sair para almoço',
+    hint: 'Trabalhando agora',
+    icon: LogOut,
+    cor: 'warning' as const,
+    heroImagem: '/telas/dia/dashboard-coo-hero-work.png',
+    heroImagemNoite: '/telas/noite/dashboard-coo-hero-work.png',
+    heroTempoLabel: 'Início da jornada',
+    // usado so no preview dev: com dado real o valor vem de horaLocal(turnoAberto.iniciadoEm)
+    heroTempoValor: '08:15',
+  },
+  // preview only, nao vem de dado real (ver comentario acima)
+  retornoAlmoco: {
+    label: 'Retornar do almoço',
+    hint: 'Em horário de almoço',
+    icon: UtensilsCrossed,
+    cor: 'warning' as const,
+    heroImagem: '/telas/dia/dashboard-coo-hero-pausa.png',
+    heroImagemNoite: '/telas/noite/dashboard-coo-hero-pausa.png',
+    heroTempoLabel: 'Início do intervalo',
+    heroTempoValor: '12:00',
+  },
+  fimExpediente: {
+    label: 'Encerrar expediente',
+    hint: 'Finalizando o expediente',
+    icon: Power,
+    cor: 'destructive' as const,
+    heroImagem: '/telas/dia/dashboard-coo-hero-final.png',
+    heroImagemNoite: '/telas/noite/dashboard-coo-hero-final.png',
+    heroTempoLabel: 'Previsão de saída',
+    heroTempoValor: '17:45',
+  },
+}
+
+function horaLocal(iso: string) {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 const corEstadoClasses = {
@@ -124,7 +179,7 @@ const iconePorTipoNotif = { comunicado: Megaphone, evento: Calendar, documento: 
 const corPorTipoNotif = {
   comunicado: 'bg-primary/10 text-primary',
   evento: 'bg-info/10 text-info',
-  documento: 'bg-warning/10 text-warning-foreground',
+  documento: 'bg-warning/10 text-warning',
 }
 
 function iniciais(nome: string) {
@@ -137,11 +192,59 @@ function iniciais(nome: string) {
     .toUpperCase()
 }
 
-export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => void }) {
+export function DashboardPanel({
+  nome,
+  turnoAberto,
+  onSair,
+  previewDevAtivo,
+  modoDev,
+}: {
+  nome: string
+  turnoAberto: TurnoAberto | null
+  onSair: () => void
+  previewDevAtivo?: boolean
+  modoDev: boolean
+}) {
   const router = useRouter()
+
+  // DEV PREVIEW: forca o estado do KPI sem precisar bater ponto de verdade.
+  // liberado so pro login marcado em DEV_PREVIEW_LOGIN (ver lib/dev-preview),
+  // nao por NODE_ENV, pra dar pra mostrar pra alguem de fora sem rodar local.
+  // 'real' usa o turno de verdade; os outros 3 sobrescrevem so pra visualizar
+  const [previewDev, setPreviewDev] = useState<keyof typeof estadosPonto | 'real'>('real')
+  const [turnoPreview, setTurnoPreview] = useState<'dia' | 'noite'>('dia')
+  const emDev = modoDev && previewDevAtivo !== false
+
+  const estadoReal = turnoAberto
+    ? { ...estadosPonto.comTurno, heroTempoValor: horaLocal(turnoAberto.iniciadoEm) }
+    : estadosPonto.semTurno
+
+  const chaveEstado: keyof typeof estadosPonto =
+    emDev && previewDev !== 'real' ? previewDev : turnoAberto ? 'comTurno' : 'semTurno'
+
+  const estadoBase = emDev && previewDev !== 'real' ? estadosPonto[previewDev] : estadoReal
+  const estadoAtual =
+    emDev && turnoPreview === 'noite'
+      ? { ...estadoBase, heroImagem: estadosPonto[chaveEstado].heroImagemNoite }
+      : estadoBase
+
   const [fabAberto, setFabAberto] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [notifAberto, setNotifAberto] = useState(false)
+  const [devAberto, setDevAberto] = useState(false)
+  const [saudacao, setSaudacao] = useState<string | null>(null)
+
+  useEffect(() => {
+    const atualizar = () => {
+      const hora = new Date().getHours()
+      if (hora >= 5 && hora < 12) setSaudacao('Bom dia')
+      else if (hora >= 12 && hora < 18) setSaudacao('Boa tarde')
+      else setSaudacao('Boa noite')
+    }
+    atualizar()
+    const id = setInterval(atualizar, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const pedirConfirmacaoSaida = () => {
     setMenuAberto(false)
@@ -218,29 +321,132 @@ export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => v
 
       {notifAberto && <div onClick={() => setNotifAberto(false)} className="fixed inset-0 z-20" />}
 
+      {emDev && (
+        <>
+          {/* botão colapsado: pill discreto no msm nível do FAB de ações, no lado oposto */}
+          {!devAberto && (
+            <button
+              onClick={() => setDevAberto(true)}
+              aria-label="Abrir seletor de visualização"
+              className="fixed bottom-24 left-5 z-30 flex items-center gap-1.5 rounded-full border border-border bg-card/90 py-2 pl-2.5 pr-3 shadow-lg backdrop-blur transition-all hover:scale-105 active:scale-95"
+            >
+              {turnoPreview === 'noite' ? (
+                <Moon className="size-4 text-yellow-400" />
+              ) : (
+                <Sun className="size-4 text-primary" />
+              )}
+              <span className="text-xs font-semibold text-foreground">
+                {turnoPreview === 'noite' ? 'Noite' : 'Dia'}
+              </span>
+            </button>
+          )}
+
+          {/* painel expandido */}
+          {devAberto && (
+            <div className="fixed bottom-24 left-5 z-50 flex flex-col gap-1.5">
+              <button
+                onClick={() => setDevAberto(false)}
+                aria-label="Fechar seletor"
+                className="self-start rounded-full border border-border bg-card/95 p-2 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+
+              <div className="relative z-50 flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card/95 p-2 text-foreground shadow-2xl backdrop-blur">
+                <div className="flex flex-wrap items-center justify-center gap-1">
+                  <button
+                    onClick={() => setPreviewDev('real')}
+                    title="Estado real do turno"
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      previewDev === 'real'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    Real
+                  </button>
+                  {(
+                    [
+                      ['semTurno', 'Entrada'],
+                      ['comTurno', 'Sair almoço'],
+                      ['retornoAlmoco', 'Voltar almoço *'],
+                      ['fimExpediente', 'Fim expediente *'],
+                    ] as const
+                  ).map(([v, texto]) => (
+                    <button
+                      key={v}
+                      onClick={() => setPreviewDev(v)}
+                      title={texto.includes('*') ? 'preview visual: não vem de dado real ainda' : undefined}
+                      className={`pointer-events-auto rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        previewDev === v
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {texto}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pointer-events-auto flex min-w-0 items-center gap-2.5 rounded-full bg-muted p-1 text-foreground">
+                  {(
+                    [
+                      ['dia', Sun, 'Ver modo dia'],
+                      ['noite', Moon, 'Ver turno da noite'],
+                    ] as const
+                  ).map(([v, Icone, titulo]) => (
+                    <button
+                      key={v}
+                      onClick={() => setTurnoPreview(v)}
+                      title={titulo}
+                      aria-label={titulo}
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
+                        turnoPreview === v
+                          ? v === 'noite'
+                            ? 'bg-slate-900 text-yellow-300 shadow-inner'
+                            : 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Icone className="size-4" />
+                    </button>
+                  ))}
+                  <span className="pr-2 text-xs font-medium text-muted-foreground">
+                    {turnoPreview === 'dia' ? 'Dia' : 'Noite'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Conteúdo */}
       <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-1 pb-24">
         {/* Hero — boas-vindas + status */}
-        <section className="relative flex min-h-[340px] shrink-0 flex-col justify-end overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
+        <section className="relative flex min-h-[340px] shrink-0 flex-col justify-end overflow-hidden rounded-2xl bg-background p-5 text-white dark:bg-neutral-800">
           <Image
             src={estadoAtual.heroImagem}
             alt=""
             fill
             sizes="(max-width: 640px) 100vw, 640px"
-            className="object-cover opacity-70"
+            className="object-cover brightness-110"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/25 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent dark:hidden" />
+          <div className="absolute inset-0 hidden bg-gradient-to-t from-black/70 via-black/15 to-transparent dark:block" />
           <div className="relative z-10 flex flex-col gap-5">
-            <div className="-translate-y-4">
-              <h1 className="mb-2 text-2xl font-bold">Olá, {nome.split(' ')[0]}!</h1>
-              <div className="flex w-fit items-center gap-2 rounded-full bg-primary-foreground/20 px-4 py-1.5 backdrop-blur">
+            <div className="translate-y-1">
+              <h1 className="mb-2 text-2xl font-bold">
+                {saudacao ? `${saudacao}, ${nome.split(' ')[0]}!` : `Olá, ${nome.split(' ')[0]}!`}
+              </h1>
+              <div className="flex w-fit items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 backdrop-blur">
                 <span className={`size-2.5 animate-pulse rounded-full ${corEstadoClasses[estadoAtual.cor].dot}`} />
                 <span className="text-xs font-semibold uppercase tracking-wider">{estadoAtual.hint}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="mb-0.5 text-xs font-medium opacity-80">{estadoAtual.heroTempoLabel}</p>
+              <p className="mb-0.5 text-xs font-semibold">{estadoAtual.heroTempoLabel}</p>
               <p className="font-mono text-4xl font-bold leading-none">{estadoAtual.heroTempoValor}</p>
             </div>
           </div>
@@ -254,11 +460,12 @@ export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => v
           </div>
 
           <button
-            disabled
-            className={`relative flex size-44 flex-col items-center justify-center gap-2 rounded-full opacity-90 shadow-xl ${corEstadoClasses[estadoAtual.cor].bg}`}
+            onClick={() => router.push('/ponto')}
+            aria-label="Ir para registrar ponto"
+            className={`relative flex size-44 flex-col items-center justify-center gap-2 rounded-full opacity-90 shadow-xl transition-transform active:scale-95 ${corEstadoClasses[estadoAtual.cor].bg}`}
           >
-            <UtensilsCrossed className="size-9" />
-            <span className="text-base font-semibold">Sair para almoço</span>
+            <estadoAtual.icon className="size-9" />
+            <span className="text-base font-semibold">{estadoAtual.label}</span>
           </button>
 
           <div className="flex w-full items-center justify-around pt-1">
@@ -347,7 +554,12 @@ export function DashboardPanel({ nome, onSair }: { nome: string; onSair: () => v
         {acoesRapidas.map((a, i) => (
           <button
             key={a.label}
-            disabled
+            disabled={!a.href}
+            onClick={() => {
+              if (!a.href) return
+              setFabAberto(false)
+              router.push(a.href)
+            }}
             tabIndex={fabAberto ? 0 : -1}
             style={{ transitionDelay: fabAberto ? `${(acoesRapidas.length - 1 - i) * 40}ms` : '0ms' }}
             className={`flex items-center gap-2.5 rounded-full border border-border bg-card py-1.5 pl-4 pr-1.5 text-sm font-medium text-foreground shadow-lg transition-all duration-200 ease-out ${
