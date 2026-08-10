@@ -87,6 +87,8 @@ export function PontoScreen({
   const [pendentes, setPendentes] = useState(0)
   const [agora, setAgora] = useState<Date | null>(null)
   const [resetando, setResetando] = useState(false)
+  // dev preview: simula perto/longe do local sem precisar se mexer de verdade
+  const [overrideGeo, setOverrideGeo] = useState<'real' | 'perto' | 'longe'>('real')
 
   // relogio so no cliente: renderizar hora no servidor causaria hydration mismatch
   useEffect(() => {
@@ -121,10 +123,23 @@ export function PontoScreen({
     }
   }, [local])
 
+  // dev preview: "perto" usa a coordenada exata do local (garante dentro do
+  // raio), "longe" desloca ~5,5km (garante fora, nao importa o raio configurado)
+  const posicaoEfetiva = useMemo(() => {
+    if (modoDev && overrideGeo !== 'real' && geofence) {
+      return {
+        latitude: geofence.latitude + (overrideGeo === 'longe' ? 0.05 : 0),
+        longitude: geofence.longitude,
+        precisaoM: 15,
+      }
+    }
+    return posicao
+  }, [modoDev, overrideGeo, geofence, posicao])
+
   const distancia = useMemo(() => {
-    if (!posicao || !geofence) return null
-    return distanciaMetros(posicao.latitude, posicao.longitude, geofence.latitude, geofence.longitude)
-  }, [posicao, geofence])
+    if (!posicaoEfetiva || !geofence) return null
+    return distanciaMetros(posicaoEfetiva.latitude, posicaoEfetiva.longitude, geofence.latitude, geofence.longitude)
+  }, [posicaoEfetiva, geofence])
 
   const dentroDoRaio = distancia !== null && geofence !== null && distancia <= geofence.raioM
 
@@ -156,8 +171,9 @@ export function PontoScreen({
     setEnviando(true)
 
     // pede a permissao aqui, no clique, e nao ao abrir a tela: assim o popup
-    // do navegador aparece com contexto do que o cooperado acabou de pedir
-    const atual = posicao ?? (await capturar())
+    // do navegador aparece com contexto do que o cooperado acabou de pedir.
+    // posicaoEfetiva ja cobre o override de dev (perto/longe), sem chamar capturar()
+    const atual = posicaoEfetiva ?? (await capturar())
     if (!atual) {
       setEnviando(false)
       return
@@ -198,7 +214,7 @@ export function PontoScreen({
     router.refresh()
   }
 
-  const semLocalizacao = !posicao
+  const semLocalizacao = !posicaoEfetiva
   // nao exige posicao: ela e capturada no proprio clique
   const podeBater = !!contratoId && !enviando && !carregandoGeo
 
@@ -218,7 +234,7 @@ export function PontoScreen({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className={`flex min-h-dvh flex-col bg-background ${modoDev && geofence ? 'pb-14' : ''}`}>
       <div className="relative flex shrink-0 items-center border-b border-border px-4 py-4">
         <button
           onClick={() => router.push('/dashboard')}
@@ -281,7 +297,7 @@ export function PontoScreen({
             </div>
           )}
 
-          {permissao === 'pendente' && !posicao ? (
+          {permissao === 'pendente' && !posicaoEfetiva ? (
             <div className="border-b border-border px-5 py-6">
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 text-center shadow-sm">
                 <span className="flex size-12 items-center justify-center rounded-full bg-primary/12">
@@ -334,8 +350,8 @@ export function PontoScreen({
           ) : (
             <>
               <MapaPonto
-                latitude={posicao.latitude}
-                longitude={posicao.longitude}
+                latitude={posicaoEfetiva.latitude}
+                longitude={posicaoEfetiva.longitude}
                 local={geofence}
                 dentroDoRaio={dentroDoRaio}
               />
@@ -425,6 +441,31 @@ export function PontoScreen({
             )}
           </div>
         </>
+      )}
+
+      {modoDev && geofence && (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-1.5 border-t border-amber-400 bg-amber-50 px-4 py-2.5">
+          <span className="text-[11px] font-semibold text-amber-700">Dev · localização:</span>
+          {(
+            [
+              ['real', 'Real'],
+              ['perto', 'Perto'],
+              ['longe', 'Longe'],
+            ] as const
+          ).map(([v, texto]) => (
+            <button
+              key={v}
+              onClick={() => setOverrideGeo(v)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                overrideGeo === v
+                  ? 'bg-amber-500 text-white'
+                  : 'border border-amber-400 bg-white text-amber-700 hover:bg-amber-100'
+              }`}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
