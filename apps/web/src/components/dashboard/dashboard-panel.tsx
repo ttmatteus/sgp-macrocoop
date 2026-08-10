@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { aplicarTema, obterPreferencia } from '@/lib/tema'
 import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
 import {
   Archive,
@@ -250,11 +252,27 @@ export function DashboardPanel({
         }
       : estadoBase
 
+  // preview de noite forca o tema escuro tb (fundo branco destoava), e volta
+  // pra preferencia real do usuario assim que sai do preview ou volta pro dia
+  useEffect(() => {
+    if (emDev && turnoPreview === 'noite') {
+      document.documentElement.classList.add('dark')
+    } else {
+      aplicarTema(obterPreferencia())
+    }
+  }, [emDev, turnoPreview])
+
   const [fabAberto, setFabAberto] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [notifAberto, setNotifAberto] = useState(false)
   const [devAberto, setDevAberto] = useState(false)
   const [saudacao, setSaudacao] = useState<string | null>(null)
+  // os overlays fixed vao pra um portal em document.body (ver return): a
+  // trilha do AppShell anima com transform agora, e transform no ancestral
+  // cria containing block novo pra position:fixed, prendendo eles dentro da
+  // trilha em vez da tela toda. document so existe no client, dai o estado
+  const [montadoNoBody, setMontadoNoBody] = useState(false)
+  useEffect(() => setMontadoNoBody(true), [])
 
   useEffect(() => {
     const atualizar = () => {
@@ -340,108 +358,6 @@ export function DashboardPanel({
           </button>
         </div>
       </header>
-
-      {notifAberto && <div onClick={() => setNotifAberto(false)} className="fixed inset-0 z-20" />}
-
-      {emDev && (
-        <>
-          {/* botão colapsado: pill discreto no msm nível do FAB de ações, no lado oposto */}
-          {!devAberto && (
-            <button
-              onClick={() => setDevAberto(true)}
-              aria-label="Abrir seletor de visualização"
-              className="fixed bottom-24 left-5 z-30 flex items-center gap-1.5 rounded-full border border-border bg-card/90 py-2 pl-2.5 pr-3 shadow-lg backdrop-blur transition-all hover:scale-105 active:scale-95"
-            >
-              {turnoPreview === 'noite' ? (
-                <Moon className="size-4 text-yellow-400" />
-              ) : (
-                <Sun className="size-4 text-primary" />
-              )}
-              <span className="text-xs font-semibold text-foreground">
-                {turnoPreview === 'noite' ? 'Noite' : 'Dia'}
-              </span>
-            </button>
-          )}
-
-          {/* painel expandido */}
-          {devAberto && (
-            <div className="fixed bottom-24 left-5 z-50 flex flex-col gap-1.5">
-              <button
-                onClick={() => setDevAberto(false)}
-                aria-label="Fechar seletor"
-                className="self-start rounded-full border border-border bg-card/95 p-2 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-
-              <div className="relative z-50 flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card/95 p-2 text-foreground shadow-2xl backdrop-blur">
-                <div className="flex flex-wrap items-center justify-center gap-1">
-                  <button
-                    onClick={() => setPreviewDev('real')}
-                    title="Estado real do turno"
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      previewDev === 'real'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted'
-                    }`}
-                  >
-                    Real
-                  </button>
-                  {(
-                    [
-                      ['semTurno', 'Entrada'],
-                      ['comTurno', 'Sair almoço'],
-                      ['retornoAlmoco', 'Voltar almoço *'],
-                      ['fimExpediente', 'Fim expediente *'],
-                    ] as const
-                  ).map(([v, texto]) => (
-                    <button
-                      key={v}
-                      onClick={() => setPreviewDev(v)}
-                      title={texto.includes('*') ? 'preview visual: não vem de dado real ainda' : undefined}
-                      className={`pointer-events-auto rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        previewDev === v
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted'
-                      }`}
-                    >
-                      {texto}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="pointer-events-auto flex min-w-0 items-center gap-2.5 rounded-full bg-muted p-1 text-foreground">
-                  {(
-                    [
-                      ['dia', Sun, 'Ver modo dia'],
-                      ['noite', Moon, 'Ver turno da noite'],
-                    ] as const
-                  ).map(([v, Icone, titulo]) => (
-                    <button
-                      key={v}
-                      onClick={() => setTurnoPreview(v)}
-                      title={titulo}
-                      aria-label={titulo}
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
-                        turnoPreview === v
-                          ? v === 'noite'
-                            ? 'bg-slate-900 text-yellow-300 shadow-inner'
-                            : 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Icone className="size-4" />
-                    </button>
-                  ))}
-                  <span className="pr-2 text-xs font-medium text-muted-foreground">
-                    {turnoPreview === 'dia' ? 'Dia' : 'Noite'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
 
       {/* Conteúdo */}
       <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-1 pb-24">
@@ -569,104 +485,213 @@ export function DashboardPanel({
         </div>
       </main>
 
-      {fabAberto && <div onClick={() => setFabAberto(false)} className="fixed inset-0 z-10 bg-foreground/10" />}
-
-      {/* FAB — menu de ações rápidas */}
-      <div className="fixed bottom-24 right-5 z-20 flex flex-col items-end gap-3">
-        {acoesRapidas.map((a, i) => (
-          <button
-            key={a.label}
-            disabled={!a.href}
-            onClick={() => {
-              if (!a.href) return
-              setFabAberto(false)
-              router.push(a.href)
-            }}
-            tabIndex={fabAberto ? 0 : -1}
-            style={{ transitionDelay: fabAberto ? `${(acoesRapidas.length - 1 - i) * 40}ms` : '0ms' }}
-            className={`flex items-center gap-2.5 rounded-full border border-border bg-card py-1.5 pl-4 pr-1.5 text-sm font-medium text-foreground shadow-lg transition-all duration-200 ease-out ${
-              fabAberto ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-2 scale-90 opacity-0'
-            }`}
-          >
-            {a.label}
-            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <a.icon className="size-4" />
-            </span>
-          </button>
-        ))}
-
-        <button
-          onClick={() => setFabAberto((v) => !v)}
-          aria-label={fabAberto ? 'Fechar ações rápidas' : 'Abrir ações rápidas'}
-          aria-expanded={fabAberto}
-          className={`flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform active:scale-95 ${
-            fabAberto ? 'rotate-45' : ''
-          }`}
-        >
-          <Plus className="size-6" />
-        </button>
-      </div>
-
       {/* BottomNav agora é compartilhado, vem do AppShell (trilha dashboard/perfil/ajustes) */}
+      {/* Confirmação de saída fica no AppShell agora, é compartilhada com perfil/ajustes */}
 
-      {menuAberto && <div onClick={() => setMenuAberto(false)} className="fixed inset-0 z-40 bg-foreground/30" />}
+      {montadoNoBody &&
+        createPortal(
+          <>
+            {notifAberto && <div onClick={() => setNotifAberto(false)} className="fixed inset-0 z-20" />}
 
-      {/* Menu lateral (drawer) */}
-      <div
-        className={`fixed inset-y-0 left-0 z-50 flex w-[78%] max-w-[300px] flex-col bg-card shadow-2xl transition-transform duration-300 ease-out ${
-          menuAberto ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-              {iniciais(nome)}
-            </span>
-            <p className="text-sm font-semibold text-foreground">{nome}</p>
-          </div>
-          <button
-            onClick={() => setMenuAberto(false)}
-            aria-label="Fechar menu"
-            className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+            {emDev && (
+              <>
+                {/* botão colapsado: pill discreto no msm nível do FAB de ações, no lado oposto */}
+                {!devAberto && (
+                  <button
+                    onClick={() => setDevAberto(true)}
+                    aria-label="Abrir seletor de visualização"
+                    className="fixed bottom-24 left-5 z-30 flex items-center gap-1.5 rounded-full border border-border bg-card/90 py-2 pl-2.5 pr-3 shadow-lg backdrop-blur transition-all hover:scale-105 active:scale-95"
+                  >
+                    {turnoPreview === 'noite' ? (
+                      <Moon className="size-4 text-yellow-400" />
+                    ) : (
+                      <Sun className="size-4 text-primary" />
+                    )}
+                    <span className="text-xs font-semibold text-foreground">
+                      {turnoPreview === 'noite' ? 'Noite' : 'Dia'}
+                    </span>
+                  </button>
+                )}
 
-        <nav className="flex-1 overflow-y-auto py-2">
-          {menuLateral.map((item) => (
-            <button
-              key={item.label}
-              disabled={!item.href}
-              onClick={() => {
-                setMenuAberto(false)
-                if (item.href) router.push(item.href)
-              }}
-              className={`flex w-full items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
-                item.href ? 'text-foreground hover:bg-muted' : 'cursor-default text-muted-foreground/50'
+                {/* painel expandido */}
+                {devAberto && (
+                  <div className="fixed bottom-24 left-5 z-50 flex flex-col gap-1.5">
+                    <button
+                      onClick={() => setDevAberto(false)}
+                      aria-label="Fechar seletor"
+                      className="self-start rounded-full border border-border bg-card/95 p-2 text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+
+                    <div className="relative z-50 flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card/95 p-2 text-foreground shadow-2xl backdrop-blur">
+                      <div className="flex flex-wrap items-center justify-center gap-1">
+                        <button
+                          onClick={() => setPreviewDev('real')}
+                          title="Estado real do turno"
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            previewDev === 'real'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:bg-muted'
+                          }`}
+                        >
+                          Real
+                        </button>
+                        {(
+                          [
+                            ['semTurno', 'Entrada'],
+                            ['comTurno', 'Sair almoço'],
+                            ['retornoAlmoco', 'Voltar almoço *'],
+                            ['fimExpediente', 'Fim expediente *'],
+                          ] as const
+                        ).map(([v, texto]) => (
+                          <button
+                            key={v}
+                            onClick={() => setPreviewDev(v)}
+                            title={texto.includes('*') ? 'preview visual: não vem de dado real ainda' : undefined}
+                            className={`pointer-events-auto rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              previewDev === v
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {texto}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="pointer-events-auto flex min-w-0 items-center gap-2.5 rounded-full bg-muted p-1 text-foreground">
+                        {(
+                          [
+                            ['dia', Sun, 'Ver modo dia'],
+                            ['noite', Moon, 'Ver turno da noite'],
+                          ] as const
+                        ).map(([v, Icone, titulo]) => (
+                          <button
+                            key={v}
+                            onClick={() => setTurnoPreview(v)}
+                            title={titulo}
+                            aria-label={titulo}
+                            className={`flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
+                              turnoPreview === v
+                                ? v === 'noite'
+                                  ? 'bg-slate-900 text-yellow-300 shadow-inner'
+                                  : 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <Icone className="size-4" />
+                          </button>
+                        ))}
+                        <span className="pr-2 text-xs font-medium text-muted-foreground">
+                          {turnoPreview === 'dia' ? 'Dia' : 'Noite'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {fabAberto && <div onClick={() => setFabAberto(false)} className="fixed inset-0 z-10 bg-foreground/10" />}
+
+            {/* FAB — menu de ações rápidas */}
+            <div className="fixed bottom-24 right-5 z-20 flex flex-col items-end gap-3">
+              {acoesRapidas.map((a, i) => (
+                <button
+                  key={a.label}
+                  disabled={!a.href}
+                  onClick={() => {
+                    if (!a.href) return
+                    setFabAberto(false)
+                    router.push(a.href)
+                  }}
+                  tabIndex={fabAberto ? 0 : -1}
+                  style={{ transitionDelay: fabAberto ? `${(acoesRapidas.length - 1 - i) * 40}ms` : '0ms' }}
+                  className={`flex items-center gap-2.5 rounded-full border border-border bg-card py-1.5 pl-4 pr-1.5 text-sm font-medium text-foreground shadow-lg transition-all duration-200 ease-out ${
+                    fabAberto
+                      ? 'translate-y-0 scale-100 opacity-100'
+                      : 'pointer-events-none translate-y-2 scale-90 opacity-0'
+                  }`}
+                >
+                  {a.label}
+                  <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <a.icon className="size-4" />
+                  </span>
+                </button>
+              ))}
+
+              <button
+                onClick={() => setFabAberto((v) => !v)}
+                aria-label={fabAberto ? 'Fechar ações rápidas' : 'Abrir ações rápidas'}
+                aria-expanded={fabAberto}
+                className={`flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform active:scale-95 ${
+                  fabAberto ? 'rotate-45' : ''
+                }`}
+              >
+                <Plus className="size-6" />
+              </button>
+            </div>
+
+            {menuAberto && <div onClick={() => setMenuAberto(false)} className="fixed inset-0 z-40 bg-foreground/30" />}
+
+            {/* Menu lateral (drawer) */}
+            <div
+              className={`fixed inset-y-0 left-0 z-50 flex w-[78%] max-w-[300px] flex-col bg-card shadow-2xl transition-transform duration-300 ease-out ${
+                menuAberto ? 'translate-x-0' : '-translate-x-full'
               }`}
             >
-              <item.icon className="size-4.5 shrink-0" />
-              <span className="flex-1 text-left">{item.label}</span>
-              {!item.href && (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  Em breve
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {iniciais(nome)}
+                  </span>
+                  <p className="text-sm font-semibold text-foreground">{nome}</p>
+                </div>
+                <button
+                  onClick={() => setMenuAberto(false)}
+                  aria-label="Fechar menu"
+                  className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
 
-        <button
-          onClick={pedirConfirmacaoSaida}
-          className="flex items-center gap-3 border-t border-border px-5 py-3.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
-        >
-          <LogOut className="size-4.5 shrink-0" />
-          Sair
-        </button>
-      </div>
+              <nav className="flex-1 overflow-y-auto py-2">
+                {menuLateral.map((item) => (
+                  <button
+                    key={item.label}
+                    disabled={!item.href}
+                    onClick={() => {
+                      setMenuAberto(false)
+                      if (item.href) router.push(item.href)
+                    }}
+                    className={`flex w-full items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                      item.href ? 'text-foreground hover:bg-muted' : 'cursor-default text-muted-foreground/50'
+                    }`}
+                  >
+                    <item.icon className="size-4.5 shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {!item.href && (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Em breve
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
 
-      {/* Confirmação de saída fica no AppShell agora, é compartilhada com perfil/ajustes */}
+              <button
+                onClick={pedirConfirmacaoSaida}
+                className="flex items-center gap-3 border-t border-border px-5 py-3.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <LogOut className="size-4.5 shrink-0" />
+                Sair
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   )
 }

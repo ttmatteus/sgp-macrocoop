@@ -185,6 +185,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* fade suave na troca claro/escuro (classe .dark no html). so no body,
+       nao em "*": transicionar toda a arvore de elementos de uma vez
+       trava a pagina */
+    transition-property: background-color, color;
+    transition-duration: 300ms;
+    transition-timing-function: ease;
   }
 }
 

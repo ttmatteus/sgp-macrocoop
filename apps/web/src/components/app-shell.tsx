@@ -24,17 +24,17 @@ const bottomNav = [
 type Tela = 'dashboard' | 'perfil' | 'ajustes'
 
 // trilha de 3 paineis (w-[300%], cada um w-1/3 = 100% da tela).
-// anima "left" em vez de transform/xPercent de propósito: o DashboardPanel
-// usa bastante position:fixed (fab, drawer, modal de sair), e um transform
-// no ancestral vira containing block pra esses fixed, prendendo eles dentro
-// da trilha em vez da tela inteira. left não tem esse efeito colateral, MAS
-// % de "left" é relativo à largura do elemento pai (a tela, 100%), não da
-// própria trilha (300%) — por isso aqui é -100%/-200% pra andar um painel
-// inteiro por vez, diferente do xPercent (que seria relativo à trilha)
-const posicaoPorTela: Record<Tela, string> = {
-  dashboard: '0%',
-  perfil: '-100%',
-  ajustes: '-200%',
+// anima transform (xPercent), nao left: left forca recalculo de layout a
+// cada frame, transform e so composicao (GPU), bem mais suave. transform no
+// ancestral cria containing block novo pra position:fixed dos filhos (o
+// DashboardPanel usa bastante: fab, drawer), entao esses elementos fixed
+// agora saem por um portal pra document.body (ver dashboard-panel.tsx) e
+// escapam da trilha. xPercent e relativo a largura do proprio elemento (a
+// trilha, 300%), por isso -33.333/-66.666 andam 1 painel (100% da tela) por vez
+const posicaoPorTela: Record<Tela, number> = {
+  dashboard: 0,
+  perfil: -100 / 3,
+  ajustes: -200 / 3,
 }
 
 export function AppShell({
@@ -87,18 +87,18 @@ export function AppShell({
       return
     }
     if (!trackRef.current) return
-    const left = posicaoPorTela[tela]
+    const xPercent = posicaoPorTela[tela]
 
     // no primeiro mount (reload ou voltando do alterar-senha) a trilha já
     // nasce na aba certa, sem deslizar a partir do dashboard
     if (!montouRef.current) {
       montouRef.current = true
-      gsap.set(trackRef.current, { left })
+      gsap.set(trackRef.current, { xPercent })
       return
     }
 
     gsap.to(trackRef.current, {
-      left,
+      xPercent,
       duration: 0.5,
       ease: 'power2.inOut',
     })
@@ -147,7 +147,7 @@ export function AppShell({
 
   return (
     <div ref={frameRef} className="relative h-dvh overflow-hidden bg-background">
-      <div ref={trackRef} className="relative left-0 flex h-full w-[300%]">
+      <div ref={trackRef} className="relative flex h-full w-[300%]">
         <div className="h-full w-1/3 shrink-0">
           <DashboardPanel
             nome={nome}
