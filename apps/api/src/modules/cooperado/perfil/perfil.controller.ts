@@ -12,6 +12,6 @@ export class PerfilController {
   @UseGuards(JwtAuthGuard)
   @Get()
   async obterPerfil(@CurrentUser() user: CurrentUserPayload): Promise<PerfilDto> {
-    return this.perfilService.buscarPerfilDoCooperado(user.vinculoId);
+    return this.perfilService.buscarPerfilDoCooperado(user.vinculoId, user.login);
   }
 }

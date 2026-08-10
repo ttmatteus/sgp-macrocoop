@@ -16,4 +16,7 @@ export class PerfilDto {
 
     @Expose()
     dataAdmissao!: Date | null;
+
+    @Expose()
+    modoDev!: boolean;
 }
