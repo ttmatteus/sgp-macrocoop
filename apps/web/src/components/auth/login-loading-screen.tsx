@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { gsap } from 'gsap'
+import { useEffect, useState } from 'react'
+import { GdcLoading } from '@/components/ui/gdc-loading'
 
 // msgs fake só p/ dar sensação de progresso, n reflete nada real do back ainda
 const etapas = ['Verificando credenciais...', 'Carregando seu painel...', 'Quase lá...']
 
 export function LoginLoadingScreen() {
   const [status, setStatus] = useState(etapas[0])
-  const logoRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const timers = [
@@ -18,26 +17,10 @@ export function LoginLoadingScreen() {
     return () => timers.forEach(clearTimeout)
   }, [])
 
-  useEffect(() => {
-    if (!logoRef.current) return
-    const tween = gsap.to(logoRef.current, {
-      scale: 1.08,
-      duration: 0.85,
-      ease: 'sine.inOut',
-      yoyo: true,
-      repeat: -1,
-    })
-    return () => {
-      tween.kill()
-    }
-  }, [])
-
   return (
     <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-primary text-primary-foreground">
       <div className="flex flex-1 flex-col items-center justify-center gap-6">
-        <div ref={logoRef} className="text-4xl font-extrabold tracking-tight">
-          GDC
-        </div>
+        <GdcLoading className="text-primary-foreground" />
         <div className="flex items-center gap-1.5">
           <span className="size-1.5 animate-bounce rounded-full bg-primary-foreground/70 [animation-delay:-0.3s]" />
           <span className="size-1.5 animate-bounce rounded-full bg-primary-foreground/70 [animation-delay:-0.15s]" />

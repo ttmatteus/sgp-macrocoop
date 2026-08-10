@@ -205,22 +205,24 @@ export function AppShell({
         style={{ transform: 'scale(0)' }}
       />
 
-      {/* Confirmação de saída, compartilhada entre dashboard/perfil/ajustes */}
+      {/* Confirmação de saída, compartilhada entre dashboard/perfil/ajustes.
+          cores fixas (nao os tokens de tema): o gif é branco, fica ruim
+          em cima de bg-card escuro no modo escuro */}
       {confirmandoSaida && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 px-6">
-          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 text-center shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 px-6">
+          <div className="w-full max-w-xs rounded-2xl border border-neutral-200 bg-white p-5 text-center shadow-2xl">
             <div className="mx-auto flex size-16 items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element -- gif animado, o next/image tira a animação */}
               <img src="/face-triste.gif" alt="" className="size-full object-contain" />
             </div>
-            <p className="mt-1 text-base font-semibold text-foreground">Sair da conta?</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-base font-semibold text-neutral-900">Sair da conta?</p>
+            <p className="mt-1 text-sm text-neutral-500">
               Você vai precisar entrar de novo pra acessar o GDC.
             </p>
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => setConfirmandoSaida(false)}
-                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                className="flex-1 rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-100"
               >
                 Cancelar
               </button>
