@@ -102,7 +102,20 @@ const historico: {
 // outro, nao um estado dentro do turno), e "encerrar expediente" precisaria
 // saber o horario previsto (TipoTurno/escala, card de admin de outra sprint).
 // os outros 2 ficam so no seletor dev, pra bater visualmente com o DS
-const estadosPonto = {
+type EstadoPonto = {
+  label: string
+  labelNoite?: string
+  hint: string
+  hintNoite?: string
+  icon: React.ComponentType<{ className?: string }>
+  cor: 'success' | 'warning' | 'destructive'
+  heroImagem: string
+  heroImagemNoite: string
+  heroTempoLabel: string
+  heroTempoValor: string
+}
+
+const estadosPonto: Record<'semTurno' | 'comTurno' | 'retornoAlmoco' | 'fimExpediente', EstadoPonto> = {
   semTurno: {
     label: 'Registrar entrada',
     hint: 'Jornada não iniciada',
@@ -115,6 +128,7 @@ const estadosPonto = {
   },
   comTurno: {
     label: 'Sair para almoço',
+    labelNoite: 'Sair para jantar',
     hint: 'Trabalhando agora',
     icon: LogOut,
     cor: 'warning' as const,
@@ -127,7 +141,9 @@ const estadosPonto = {
   // preview only, nao vem de dado real (ver comentario acima)
   retornoAlmoco: {
     label: 'Retornar do almoço',
+    labelNoite: 'Retornar do jantar',
     hint: 'Em horário de almoço',
+    hintNoite: 'Em horário de jantar',
     icon: UtensilsCrossed,
     cor: 'warning' as const,
     heroImagem: '/telas/dia/dashboard-coo-hero-pausa.png',
@@ -226,7 +242,12 @@ export function DashboardPanel({
   const estadoBase = emDev && previewDev !== 'real' ? estadosPonto[previewDev] : estadoReal
   const estadoAtual =
     emDev && turnoPreview === 'noite'
-      ? { ...estadoBase, heroImagem: estadosPonto[chaveEstado].heroImagemNoite }
+      ? {
+          ...estadoBase,
+          label: estadoBase.labelNoite ?? estadoBase.label,
+          hint: estadoBase.hintNoite ?? estadoBase.hint,
+          heroImagem: estadosPonto[chaveEstado].heroImagemNoite,
+        }
       : estadoBase
 
   const [fabAberto, setFabAberto] = useState(false)
