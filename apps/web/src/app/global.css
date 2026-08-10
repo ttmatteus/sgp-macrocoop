@@ -60,7 +60,7 @@
 
 /*
   ------------------------------------------------------------------
-  SGP Macrocoop - Design Tokens
+  GDC Macrocoop - Design Tokens
   ------------------------------------------------------------------
   A cor primária (--primary / --ring / --sidebar-primary) é
   sobrescrita em tempo de execução pelo ThemeProvider conforme a
@@ -196,6 +196,23 @@
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+/* salto natural: sobe desacelerando (ease-out), cai acelerando (ease-in,
+   como gravidade), depois descansa ate a proxima letra entrar */
+@keyframes gdc-escadinha {
+  0% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  16.5% {
+    transform: translateY(-14px);
+    animation-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+  }
+  33%,
+  100% {
+    transform: translateY(0);
+  }
 }
 
 /* atribuicao do leaflet: so diminui, o padrao dela ja combina com mapa claro */
