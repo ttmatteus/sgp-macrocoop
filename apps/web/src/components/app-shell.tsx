@@ -215,7 +215,7 @@ export function AppShell({
             </div>
             <p className="mt-1 text-base font-semibold text-foreground">Sair da conta?</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Você vai precisar entrar de novo pra acessar o SGP.
+              Você vai precisar entrar de novo pra acessar o GDC.
             </p>
             <div className="mt-5 flex gap-2">
               <button

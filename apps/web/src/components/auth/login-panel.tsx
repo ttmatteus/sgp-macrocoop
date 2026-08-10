@@ -130,7 +130,7 @@ export function LoginPanel() {
             </button>
             <div className="flex items-end gap-2">
               <span className="text-2xl font-extrabold leading-none tracking-tight text-primary">
-                SGP
+                GDC
               </span>
               <span className="text-[11px] leading-tight text-muted-foreground">
                 Sistema de
@@ -157,7 +157,7 @@ export function LoginPanel() {
               Bem-vindo de volta!
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Preencha os campos abaixo para acessar sua conta no SGP.
+              Preencha os campos abaixo para acessar sua conta no GDC.
             </p>
           </div>
 

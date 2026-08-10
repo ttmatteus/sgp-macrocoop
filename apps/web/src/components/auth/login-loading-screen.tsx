@@ -36,7 +36,7 @@ export function LoginLoadingScreen() {
     <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-primary text-primary-foreground">
       <div className="flex flex-1 flex-col items-center justify-center gap-6">
         <div ref={logoRef} className="text-4xl font-extrabold tracking-tight">
-          SGP
+          GDC
         </div>
         <div className="flex items-center gap-1.5">
           <span className="size-1.5 animate-bounce rounded-full bg-primary-foreground/70 [animation-delay:-0.3s]" />

@@ -17,7 +17,7 @@ const onboardingSlides = [
       </>
     ),
     descricao:
-      'Com o SGP, o registro de ponto fica simples, seguro e eficiente para toda a empresa.',
+      'Com o GDC, o registro de ponto fica simples, seguro e eficiente para toda a empresa.',
   },
   {
     src: '/telas/onboarding-2.png',
@@ -93,7 +93,7 @@ export default function OnboardingPage() {
       {/* Header: marca + ajuda */}
       <div className="relative z-20 flex items-start justify-between px-7 pt-6">
         <div className="flex items-end gap-2">
-          <span className="text-2xl font-extrabold leading-none tracking-tight text-primary">SGP</span>
+          <span className="text-2xl font-extrabold leading-none tracking-tight text-primary">GDC</span>
           <span className="text-[11px] leading-tight text-muted-foreground">
             Sistema de
             <br />

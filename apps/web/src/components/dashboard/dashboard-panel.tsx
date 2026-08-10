@@ -303,7 +303,7 @@ export function DashboardPanel({
           >
             <Menu className="size-5" />
           </button>
-          <span className="text-lg font-extrabold tracking-tight text-primary">SGP</span>
+          <span className="text-lg font-extrabold tracking-tight text-primary">GDC</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="relative">

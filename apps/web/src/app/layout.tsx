@@ -1,7 +1,7 @@
 import './global.css';
 
 export const metadata = {
-  title: 'SGP Macrocoop',
+  title: 'GDC Macrocoop',
   description: 'Sistema de Gestão de Cooperados',
 };
 
