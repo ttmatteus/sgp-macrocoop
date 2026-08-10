@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/session'
 import { buscarPerfil } from '@/lib/perfil'
 import { buscarTurnoAberto } from '@/app/(app)/ponto/actions'
-import { ehUsuarioDevPreview } from '@/lib/dev-preview'
 import { AppShell } from '@/components/app-shell'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       nivel={usuario.nivel}
       perfil={perfil}
       turnoAberto={turnoAberto}
-      modoDev={ehUsuarioDevPreview(usuario.login)}
+      modoDev={perfil?.modoDev ?? false}
     >
       {children}
     </AppShell>

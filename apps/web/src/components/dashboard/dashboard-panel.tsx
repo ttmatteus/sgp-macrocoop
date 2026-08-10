@@ -208,7 +208,8 @@ export function DashboardPanel({
   const router = useRouter()
 
   // DEV PREVIEW: forca o estado do KPI sem precisar bater ponto de verdade.
-  // liberado so pro login marcado em DEV_PREVIEW_LOGIN (ver lib/dev-preview),
+  // modoDev vem verificado da api (campo modoDev do /perfil, checado contra
+  // DEV_PREVIEW_LOGIN la), nao de decode de jwt sem checar assinatura aqui -
   // nao por NODE_ENV, pra dar pra mostrar pra alguem de fora sem rodar local.
   // 'real' usa o turno de verdade; os outros 3 sobrescrevem so pra visualizar
   const [previewDev, setPreviewDev] = useState<keyof typeof estadosPonto | 'real'>('real')
