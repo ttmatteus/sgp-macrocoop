@@ -71,6 +71,10 @@
 :root {
   color-scheme: light;
 
+  /* fallback antes do script de layout.tsx rodar (ou se JS falhar). dvh
+     puro trava no safari do ios apos a barra de endereco esconder/aparecer */
+  --app-height: 100dvh;
+
   /* Neutros */
   --background: oklch(0.985 0.005 145);
   --foreground: oklch(0.22 0.02 155);

@@ -100,7 +100,7 @@ export default function AlterarSenhaPage() {
   // navegando: tem que logar de novo com a senha nova
   if (sucesso) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-7">
+      <div className="flex min-h-[var(--app-height)] flex-col items-center justify-center bg-background px-7">
         <div className="flex w-full max-w-[320px] flex-col items-center gap-4 text-center">
           <span className="flex size-16 items-center justify-center rounded-full bg-success/15">
             <CheckCircle2 className="size-9 text-success" />
@@ -123,7 +123,7 @@ export default function AlterarSenhaPage() {
   }
 
   return (
-    <div ref={frameRef} className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
+    <div ref={frameRef} className="relative flex min-h-[var(--app-height)] flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="relative z-10 flex shrink-0 items-center border-b border-border px-4 py-4">
         <button

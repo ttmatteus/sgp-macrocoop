@@ -234,7 +234,9 @@ export function PontoScreen({
   }
 
   return (
-    <div className={`flex min-h-dvh flex-col bg-background ${modoDev && geofence ? 'pb-14' : ''}`}>
+    <div
+      className={`flex min-h-[var(--app-height)] flex-col bg-background ${modoDev && geofence ? 'pb-14' : ''}`}
+    >
       <div className="relative flex shrink-0 items-center border-b border-border px-4 py-4">
         <button
           onClick={() => router.push('/dashboard')}

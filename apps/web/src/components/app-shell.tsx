@@ -146,7 +146,7 @@ export function AppShell({
   if (emAlterarSenha || emPonto) return <>{children}</>
 
   return (
-    <div ref={frameRef} className="relative h-dvh overflow-hidden bg-background">
+    <div ref={frameRef} className="relative h-[var(--app-height)] overflow-hidden bg-background">
       <div ref={trackRef} className="relative flex h-full w-[300%]">
         <div className="h-full w-1/3 shrink-0">
           <DashboardPanel

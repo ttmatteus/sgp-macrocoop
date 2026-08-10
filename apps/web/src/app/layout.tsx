@@ -18,6 +18,26 @@ const SCRIPT_TEMA = `(() => {
   } catch {}
 })();`;
 
+// o safari do ios trava o valor de "dvh" depois que a barra de endereco
+// esconde/aparece (bug conhecido), e como usamos overflow-hidden junto,
+// o conteudo que nao cabe nesse valor errado fica cortado. --app-height
+// recalcula via JS (visualViewport quando disponivel, senao innerHeight)
+// toda vez que o viewport muda de verdade
+const SCRIPT_ALTURA = `(() => {
+  try {
+    const definir = () => {
+      const altura = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', altura + 'px');
+    };
+    definir();
+    window.addEventListener('resize', definir);
+    window.addEventListener('orientationchange', definir);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', definir);
+    }
+  } catch {}
+})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -27,6 +47,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_ALTURA }} />
       </head>
       <body>{children}</body>
     </html>

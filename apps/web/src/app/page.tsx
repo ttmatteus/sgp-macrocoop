@@ -89,7 +89,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div ref={frameRef} className="relative flex min-h-dvh flex-col overflow-hidden bg-[#fdf2ea]">
+    <div ref={frameRef} className="relative flex min-h-[var(--app-height)] flex-col overflow-hidden bg-[#fdf2ea]">
       {/* Header: marca + ajuda */}
       <div className="relative z-20 flex items-start justify-between px-7 pt-6">
         <div className="flex items-end gap-2">

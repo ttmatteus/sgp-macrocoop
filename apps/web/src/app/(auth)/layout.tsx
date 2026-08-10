@@ -33,7 +33,7 @@ export default function AuthLayout() {
   }, [tela])
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-background">
+    <div className="relative h-[var(--app-height)] overflow-hidden bg-background">
       <div ref={trackRef} className="flex h-full w-[200%]">
         <div className="h-full w-1/2 shrink-0">
           <LoginPanel />
