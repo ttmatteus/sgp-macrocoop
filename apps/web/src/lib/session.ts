@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers'
 
 export interface SessionUser {
-  login: string
   nome: string
   nivel: 'coordenador' | 'cooperado'
   cooperativa: { id: number; nome: string; codigo: string }

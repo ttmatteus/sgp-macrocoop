@@ -6,6 +6,9 @@ export interface Perfil {
   cpf: string
   cooperativa: string
   dataAdmissao: string | null
+  // vem verificado pela api (JwtAuthGuard), nao de decode de jwt sem checar
+  // assinatura - por isso os paineis de dev preview usam esse campo, nao a sessao
+  modoDev: boolean
 }
 
 // chamado do layout (server component), o apiFetch repassa o cookie da sessao.
