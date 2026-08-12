@@ -2,7 +2,7 @@ import './global.css';
 
 export const metadata = {
   title: 'GDC Macrocoop',
-  description: 'Sistema de Gestão de Cooperados',
+  description: 'Sistema de Gestão de Cooperativas',
 };
 
 // aplicado antes do React hidratar pra nao piscar o tema errado no reload.

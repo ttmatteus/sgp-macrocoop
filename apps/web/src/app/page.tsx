@@ -97,7 +97,7 @@ export default function OnboardingPage() {
           <span className="text-[11px] leading-tight text-muted-foreground">
             Sistema de
             <br />
-            Gestão de Cooperados
+            Gestão de Cooperativas
           </span>
         </div>
         <a
