@@ -9,6 +9,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { RabbitmqPublisherService } from '../../../core/rabbitmq/rabbitmq-publisher.service';
 import { distanciaMetros } from '../../../common/geo';
+import { hojeEmSaoPaulo } from '../../../common/data';
 import {
   JANELA_ONLINE_MS,
   JANELA_RETROATIVA_MS,
@@ -27,16 +28,6 @@ interface ResultadoValidacaoRaio {
   localPontoId: number | null;
   distanciaM: number | null;
   status: 'dentro' | 'fora' | 'indeterminado';
-}
-
-function hojeEmSaoPaulo(): Date {
-  const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-  return new Date(`${partes}T00:00:00.000Z`);
 }
 
 @Injectable()
