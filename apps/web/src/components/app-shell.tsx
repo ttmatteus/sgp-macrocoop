@@ -10,31 +10,35 @@ import { DashboardPanel } from '@/components/dashboard/dashboard-panel'
 import { LogoutScreen } from '@/components/dashboard/logout-screen'
 import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
+import { HistoricoScreen } from '@/components/historico/historico-screen'
 import type { Perfil } from '@/lib/perfil'
 import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
 import type { SessionUser } from '@/lib/session'
 
 const bottomNav = [
   { label: 'Início', icon: Home, href: '/dashboard' },
-  { label: 'Histórico', icon: History, href: null },
+  { label: 'Histórico', icon: History, href: '/historico' },
   { label: 'Perfil', icon: User, href: '/perfil' },
   { label: 'Ajustes', icon: Settings, href: '/perfil/ajustes' },
 ]
 
-type Tela = 'dashboard' | 'perfil' | 'ajustes'
+type Tela = 'dashboard' | 'historico' | 'perfil' | 'ajustes'
 
-// trilha de 3 paineis (w-[300%], cada um w-1/3 = 100% da tela).
+// trilha de 4 paineis (w-[400%], cada um w-1/4 = 100% da tela), na msm ordem
+// da bottom nav (inicio/historico/perfil/ajustes) pra deslizar pro lado certo.
 // anima transform (xPercent), nao left: left forca recalculo de layout a
 // cada frame, transform e so composicao (GPU), bem mais suave. transform no
 // ancestral cria containing block novo pra position:fixed dos filhos (o
-// DashboardPanel usa bastante: fab, drawer), entao esses elementos fixed
-// agora saem por um portal pra document.body (ver dashboard-panel.tsx) e
-// escapam da trilha. xPercent e relativo a largura do proprio elemento (a
-// trilha, 300%), por isso -33.333/-66.666 andam 1 painel (100% da tela) por vez
+// DashboardPanel e o HistoricoScreen usam: fab, drawer, bottom sheet), entao
+// esses elementos fixed saem por um portal pra document.body (ver os
+// respectivos componentes) e escapam da trilha. xPercent e relativo a
+// largura do proprio elemento (a trilha, 400%), por isso anda 1/4 dela
+// (100% da tela) por vez
 const posicaoPorTela: Record<Tela, number> = {
   dashboard: 0,
-  perfil: -100 / 3,
-  ajustes: -200 / 3,
+  historico: -100 / 4,
+  perfil: -200 / 4,
+  ajustes: -300 / 4,
 }
 
 export function AppShell({
@@ -74,15 +78,22 @@ export function AppShell({
   // alterar-senha n é aba da trilha, é navegação pra frente, ai n renderiza a
   // trilha aqui pq o router já foi pra outra pagina
   const emAlterarSenha = pathname.startsWith('/perfil/ajustes/alterar-senha')
-  // ponto tb é navegação pra frente (tela cheia com voltar), n é aba da trilha
-  const emPonto = pathname.startsWith('/ponto')
-  const tela: Tela = pathname === '/perfil/ajustes' ? 'ajustes' : pathname === '/perfil' ? 'perfil' : 'dashboard'
+  // ponto tb e navegacao pra frente (tela cheia com voltar), n aba da trilha
+  const emTelaCheia = pathname.startsWith('/ponto')
+  const tela: Tela =
+    pathname === '/perfil/ajustes'
+      ? 'ajustes'
+      : pathname === '/perfil'
+        ? 'perfil'
+        : pathname === '/historico'
+          ? 'historico'
+          : 'dashboard'
 
   useEffect(() => {
     // enquanto tá no alterar-senha a div da trilha nem existe no dom (ve o
     // return <>{children}</> ali embaixo). qnd volta ela remonta do zero sem
     // transform, entao conta como um "primeiro mount" de novo
-    if (emAlterarSenha || emPonto) {
+    if (emAlterarSenha || emTelaCheia) {
       montouRef.current = false
       return
     }
@@ -102,17 +113,17 @@ export function AppShell({
       duration: 0.5,
       ease: 'power2.inOut',
     })
-  }, [tela, emAlterarSenha, emPonto])
+  }, [tela, emAlterarSenha, emTelaCheia])
 
-  // splash verde que expande do clique e revela o alterar-senha por baixo.
+  // splash verde que expande do clique e revela a rota de destino por baixo.
   // fica aqui fora da trilha (que o gsap transforma) e acima do navbar,
   // senão o transform da trilha prende o splash num stacking context isolado
   // e o navbar (fixed) fica por cima dele mesmo com z-index maior
-  const handleAlterarSenha = (e: React.MouseEvent) => {
+  const handleSplashNavegacao = (e: React.MouseEvent, rota: string) => {
     const frame = frameRef.current
     const splash = splashRef.current
     if (!frame || !splash) {
-      router.push('/perfil/ajustes/alterar-senha')
+      router.push(rota)
       return
     }
 
@@ -133,9 +144,13 @@ export function AppShell({
       scale: 1,
       duration: 0.85,
       ease: 'power3.inOut',
-      onComplete: () => router.push('/perfil/ajustes/alterar-senha'),
+      onComplete: () => router.push(rota),
     })
   }
+
+  const handleAlterarSenha = (e: React.MouseEvent) =>
+    handleSplashNavegacao(e, '/perfil/ajustes/alterar-senha')
+  const handleBaterPonto = (e: React.MouseEvent) => handleSplashNavegacao(e, '/ponto')
 
   if (saindo) {
     return <LogoutScreen />
@@ -143,21 +158,25 @@ export function AppShell({
 
   // alterar-senha empilha (navegação pra frente), n é aba da trilha, só
   // renderiza o conteúdo real da rota aqui
-  if (emAlterarSenha || emPonto) return <>{children}</>
+  if (emAlterarSenha || emTelaCheia) return <>{children}</>
 
   return (
     <div ref={frameRef} className="relative h-[var(--app-height)] overflow-hidden bg-background">
-      <div ref={trackRef} className="relative flex h-full w-[300%]">
-        <div className="h-full w-1/3 shrink-0">
+      <div ref={trackRef} className="relative flex h-full w-[400%]">
+        <div className="h-full w-1/4 shrink-0">
           <DashboardPanel
             nome={nome}
             turnoAberto={turnoAberto}
             onSair={pedirConfirmacaoSaida}
+            onBaterPonto={handleBaterPonto}
             previewDevAtivo={tela === 'dashboard'}
             modoDev={modoDev}
           />
         </div>
-        <div className="h-full w-1/3 shrink-0">
+        <div className="h-full w-1/4 shrink-0">
+          <HistoricoScreen ativo={tela === 'historico'} />
+        </div>
+        <div className="h-full w-1/4 shrink-0">
           <PerfilPanel
             nome={nome}
             nivel={nivel}
@@ -165,7 +184,7 @@ export function AppShell({
             onSair={pedirConfirmacaoSaida}
           />
         </div>
-        <div className="h-full w-1/3 shrink-0">
+        <div className="h-full w-1/4 shrink-0">
           <AjustesPanel onAlterarSenha={handleAlterarSenha} onSair={pedirConfirmacaoSaida} />
         </div>
       </div>
@@ -175,6 +194,7 @@ export function AppShell({
         {bottomNav.map((item) => {
           const ativo =
             (item.label === 'Início' && tela === 'dashboard') ||
+            (item.label === 'Histórico' && tela === 'historico') ||
             (item.label === 'Perfil' && tela === 'perfil') ||
             (item.label === 'Ajustes' && tela === 'ajustes')
           const conteudo = (

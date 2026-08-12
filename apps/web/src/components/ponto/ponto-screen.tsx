@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { gsap } from 'gsap'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import {
@@ -28,7 +29,7 @@ import { distanciaMetros } from './distancia'
 // maplibre toca em window/document no import, entao nao pode entrar no SSR
 const MapaPonto = dynamic(() => import('./mapa-ponto').then((m) => m.MapaPonto), {
   ssr: false,
-  loading: () => <div className="h-48 w-full animate-pulse border-b border-border bg-muted" />,
+  loading: () => <div className="h-full w-full animate-pulse border-b border-border bg-muted" />,
 })
 
 const MENSAGEM_ERRO: Record<ErroRegistro, string> = {
@@ -72,6 +73,8 @@ export function PontoScreen({
   modoDev,
 }: Props) {
   const router = useRouter()
+  const frameRef = useRef<HTMLDivElement>(null)
+  const splashRef = useRef<HTMLDivElement>(null)
   const { posicao, erro: erroGeo, carregando: carregandoGeo, permissao, capturar } = usarGeolocalizacao()
 
   // com turno aberto o contrato e o dele: a API recusa fechar por outro.
@@ -233,13 +236,46 @@ export function PontoScreen({
     }
   }
 
+  // splash verde que expande do clique e revela o dashboard por baixo, mesmo
+  // padrao do handleVoltar do alterar-senha: /ponto tb e navegacao pra frente
+  // (fora da trilha do AppShell), entao precisa da propria implementacao local
+  const handleVoltar = (e: React.MouseEvent) => {
+    const frame = frameRef.current
+    const splash = splashRef.current
+    if (!frame || !splash) {
+      router.push('/dashboard')
+      return
+    }
+
+    const rect = frame.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const clickY = e.clientY - rect.top
+    const maxX = Math.max(clickX, rect.width - clickX)
+    const maxY = Math.max(clickY, rect.height - clickY)
+    const radius = Math.sqrt(maxX ** 2 + maxY ** 2)
+
+    splash.style.width = `${radius * 2}px`
+    splash.style.height = `${radius * 2}px`
+    splash.style.left = `${clickX - radius}px`
+    splash.style.top = `${clickY - radius}px`
+
+    gsap.set(splash, { scale: 0 })
+    gsap.to(splash, {
+      scale: 1,
+      duration: 0.85,
+      ease: 'power3.inOut',
+      onComplete: () => router.push('/dashboard'),
+    })
+  }
+
   return (
     <div
-      className={`flex min-h-[var(--app-height)] flex-col bg-background ${modoDev && geofence ? 'pb-14' : ''}`}
+      ref={frameRef}
+      className={`relative flex h-[var(--app-height)] flex-col overflow-y-auto bg-background ${modoDev && geofence ? 'pb-14' : ''}`}
     >
       <div className="relative flex shrink-0 items-center border-b border-border px-4 py-4">
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={handleVoltar}
           aria-label="Voltar"
           className="absolute left-4 flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
         >
@@ -300,7 +336,7 @@ export function PontoScreen({
           )}
 
           {permissao === 'pendente' && !posicaoEfetiva ? (
-            <div className="border-b border-border px-5 py-6">
+            <div className="flex flex-1 flex-col items-center justify-center border-b border-border px-5 py-6">
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 text-center shadow-sm">
                 <span className="flex size-12 items-center justify-center rounded-full bg-primary/12">
                   <MapPin className="size-6 text-primary" />
@@ -322,7 +358,7 @@ export function PontoScreen({
               </div>
             </div>
           ) : semLocalizacao ? (
-            <div className="flex flex-col items-center gap-3 border-b border-border px-8 py-12 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 border-b border-border px-8 py-12 text-center">
               <span className="flex size-14 items-center justify-center rounded-full bg-muted">
                 {carregandoGeo || permissao === 'verificando' ? (
                   <Loader2 className="size-7 animate-spin text-muted-foreground" />
@@ -351,12 +387,14 @@ export function PontoScreen({
             </div>
           ) : (
             <>
-              <MapaPonto
-                latitude={posicaoEfetiva.latitude}
-                longitude={posicaoEfetiva.longitude}
-                local={geofence}
-                dentroDoRaio={dentroDoRaio}
-              />
+              <div className="relative min-h-0 flex-1">
+                <MapaPonto
+                  latitude={posicaoEfetiva.latitude}
+                  longitude={posicaoEfetiva.longitude}
+                  local={geofence}
+                  dentroDoRaio={dentroDoRaio}
+                />
+              </div>
 
               <div className="border-b border-border px-5 py-4">
                 <div className="flex items-start gap-3">
@@ -469,6 +507,14 @@ export function PontoScreen({
           ))}
         </div>
       )}
+
+      {/* Splash de transição ao voltar. z acima do modal do ContratoPicker (z-50)
+          e da barra de dev (z-40), pra cobrir a tela toda de verdade */}
+      <div
+        ref={splashRef}
+        className="pointer-events-none fixed z-[60] rounded-full bg-primary"
+        style={{ transform: 'scale(0)' }}
+      />
     </div>
   )
 }

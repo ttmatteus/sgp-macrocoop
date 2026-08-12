@@ -132,7 +132,7 @@ export function MapaPonto({ latitude, longitude, local, dentroDoRaio = true }: M
   }, [local, dentroDoRaio])
 
   return (
-    <div className="relative isolate h-48 w-full overflow-hidden border-b border-border">
+    <div className="relative isolate h-full w-full overflow-hidden border-b border-border">
       <div ref={container} className="absolute inset-0" />
     </div>
   )

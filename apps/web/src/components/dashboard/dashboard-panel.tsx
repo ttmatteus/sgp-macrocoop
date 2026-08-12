@@ -43,7 +43,7 @@ import {
 // href null = ainda nao tem tela (o botao fica desabilitado)
 const acoesRapidas = [
   { label: 'Bater Ponto', icon: Clock, href: '/ponto' },
-  { label: 'Histórico', icon: History, href: null },
+  { label: 'Histórico', icon: History, href: '/historico' },
 ]
 
 const menuLateral = [
@@ -51,7 +51,7 @@ const menuLateral = [
   { label: 'Notificações', icon: Bell, href: null },
   { label: 'Bater Ponto', icon: Clock, href: '/ponto' },
   { label: 'SRT', icon: ClipboardList, href: null },
-  { label: 'Histórico de Ponto', icon: History, href: null },
+  { label: 'Histórico de Ponto', icon: History, href: '/historico' },
   { label: 'Minha Escala', icon: CalendarClock, href: null },
   { label: 'Folha de Produção', icon: FileText, href: null },
   { label: 'Meus Documentos', icon: FolderOpen, href: null },
@@ -214,12 +214,14 @@ export function DashboardPanel({
   nome,
   turnoAberto,
   onSair,
+  onBaterPonto,
   previewDevAtivo,
   modoDev,
 }: {
   nome: string
   turnoAberto: TurnoAberto | null
   onSair: () => void
+  onBaterPonto: (e: React.MouseEvent) => void
   previewDevAtivo?: boolean
   modoDev: boolean
 }) {
@@ -398,7 +400,7 @@ export function DashboardPanel({
           </div>
 
           <button
-            onClick={() => router.push('/ponto')}
+            onClick={onBaterPonto}
             aria-label="Ir para registrar ponto"
             className={`relative flex size-44 flex-col items-center justify-center gap-2 rounded-full opacity-90 shadow-xl transition-transform active:scale-95 ${corEstadoClasses[estadoAtual.cor].bg}`}
           >
@@ -601,9 +603,13 @@ export function DashboardPanel({
                 <button
                   key={a.label}
                   disabled={!a.href}
-                  onClick={() => {
+                  onClick={(e) => {
                     if (!a.href) return
                     setFabAberto(false)
+                    if (a.href === '/ponto') {
+                      onBaterPonto(e)
+                      return
+                    }
                     router.push(a.href)
                   }}
                   tabIndex={fabAberto ? 0 : -1}
@@ -662,9 +668,14 @@ export function DashboardPanel({
                   <button
                     key={item.label}
                     disabled={!item.href}
-                    onClick={() => {
+                    onClick={(e) => {
                       setMenuAberto(false)
-                      if (item.href) router.push(item.href)
+                      if (!item.href) return
+                      if (item.href === '/ponto') {
+                        onBaterPonto(e)
+                        return
+                      }
+                      router.push(item.href)
                     }}
                     className={`flex w-full items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
                       item.href ? 'text-foreground hover:bg-muted' : 'cursor-default text-muted-foreground/50'
