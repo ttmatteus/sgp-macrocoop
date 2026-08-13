@@ -106,6 +106,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
+    "date-holidays": "^3.34.1",
     "express": "^5.2.1",
     "prisma": "^7.9.1",
     "reflect-metadata": "^0.2.0",
