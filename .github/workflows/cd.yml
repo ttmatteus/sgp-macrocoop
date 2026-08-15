@@ -11,44 +11,14 @@ permissions:
   id-token: write
 
 jobs:
-  changes:
+  deploy-api:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    outputs:
-      api: ${{ steps.filter.outputs.api }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
-
-      - id: filter
-        run: |
-          if git diff --quiet ${{ github.event.workflow_run.head_sha }}^ ${{ github.event.workflow_run.head_sha }} -- apps/api; then
-            echo "api=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "api=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  deploy-api:
-    needs: changes
-    if: needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm exec nx run @org/api:prune
 
       - uses: google-github-actions/auth@v2
         with:
@@ -57,11 +27,58 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - run: |
+      # compara com o commit que esta rodando em producao, nao com o commit
+      # anterior do main: um push com varios commits em que o ultimo nao mexe
+      # na api pulava o deploy e deixava producao pra tras em silencio.
+      # se nao der pra saber o que esta la, faz o deploy (errar pra mais e
+      # so um build a toa, errar pra menos deixa producao quebrada)
+      - id: deployado
+        run: |
+          sha=$(gcloud run services describe sgp-macrocoop-api \
+            --region southamerica-east1 \
+            --project sgp-macrocoop \
+            --format=json 2>/dev/null | jq -r '.metadata.labels["commit-sha"] // empty')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "em producao: ${sha:-desconhecido}"
+
+      - id: precisa
+        run: |
+          anterior="${{ steps.deployado.outputs.sha }}"
+          if [ -z "$anterior" ] || ! git cat-file -e "$anterior^{commit}" 2>/dev/null; then
+            echo "sem referencia confiavel do que esta em producao, vai deployar"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$anterior" "${{ github.event.workflow_run.head_sha }}" -- apps/api; then
+            echo "apps/api igual ao que ja esta em producao"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "apps/api mudou desde o ultimo deploy"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.precisa.outputs.deploy == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.precisa.outputs.deploy == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.precisa.outputs.deploy == 'true'
+
+      - run: pnpm exec nx run @org/api:prune
+        if: steps.precisa.outputs.deploy == 'true'
+
+      # a label commit-sha e o que a proxima execucao usa pra saber o que ja
+      # esta no ar, entao precisa ser gravada no mesmo comando do deploy
+      - if: steps.precisa.outputs.deploy == 'true'
+        run: |
           gcloud run deploy sgp-macrocoop-api \
             --source apps/api \
             --region southamerica-east1 \
             --project sgp-macrocoop \
             --allow-unauthenticated \
             --quiet \
+            --labels "commit-sha=${{ github.event.workflow_run.head_sha }}" \
             --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }},UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }},JWT_SECRET=${{ secrets.JWT_SECRET }},GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }},RABBITMQ_URL=${{ secrets.RABBITMQ_URL }},DEV_PREVIEW_LOGIN=usuario_dev"
