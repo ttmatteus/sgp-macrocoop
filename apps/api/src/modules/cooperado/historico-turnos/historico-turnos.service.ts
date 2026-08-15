@@ -5,7 +5,10 @@ import {
 } from './dto/historico-turnos.dto';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
-import { inicioDoDia, inicioDoProximoDia } from '../../../common/data';
+import {
+  inicioDoDiaEmSaoPaulo,
+  inicioDoProximoDiaEmSaoPaulo,
+} from '../../../common/data';
 
 @Injectable()
 export class HistoricoTurnosService {
@@ -46,12 +49,12 @@ export class HistoricoTurnosService {
       where.iniciado_em = {};
 
       if (filtros.inicio) {
-        where.iniciado_em.gte = inicioDoDia(filtros.inicio);
+        where.iniciado_em.gte = inicioDoDiaEmSaoPaulo(filtros.inicio);
 
       }
 
       if (filtros.fim) {
-        where.iniciado_em.lt = inicioDoProximoDia(filtros.fim);
+        where.iniciado_em.lt = inicioDoProximoDiaEmSaoPaulo(filtros.fim);
       }
     }
 
