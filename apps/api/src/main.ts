@@ -42,7 +42,11 @@ async function bootstrap() {
     credentials: true,
   });
   app.use(cookieParser());
-  app.useGlobalPipes(new ValidationPipe());
+  // transform habilita o @Type(() => Number) dos DTOs, necessario pra
+  // parametro numerico de query string nao cair no @IsInt() como texto.
+  // sem enableImplicitConversion de proposito: ele converteria qualquer
+  // campo pelo tipo declarado, afrouxando validacao no resto da api
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
