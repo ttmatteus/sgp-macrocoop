@@ -46,7 +46,10 @@ describe('LoginService', () => {
     });
     jwtService.sign.mockReturnValue('token-jwt');
 
-    await service.login({ usuario: 'cooperado', senha: 'Senha123' });
+    await service.login(
+      { usuario: 'cooperado', senha: 'Senha123' },
+      { ip: '203.0.113.1', userAgent: 'Mozilla/5.0' },
+    );
 
     expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Object), {
       jwtid: expect.any(String),
@@ -54,8 +57,16 @@ describe('LoginService', () => {
     const jti = jwtService.sign.mock.calls[0][1].jwtid;
     expect(redis.eval).toHaveBeenCalledWith(
       expect.any(String),
-      ['auth:sessoes:7'],
-      [jti, 3600],
+      ['auth:sessoes:7', `auth:sessao:${jti}`],
+      [jti, 3600, expect.any(String)],
     );
+
+    // o detalhe vai como json na 3a posicao do argv - confere o conteudo,
+    // nao so que "e uma string qualquer"
+    const detalheJson = redis.eval.mock.calls[0][2][2];
+    expect(JSON.parse(detalheJson)).toMatchObject({
+      ip: '203.0.113.1',
+      userAgent: 'Mozilla/5.0',
+    });
   });
 });

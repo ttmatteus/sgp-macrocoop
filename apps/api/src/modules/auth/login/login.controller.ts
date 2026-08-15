@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -23,9 +24,17 @@ export class LoginController {
   @UseInterceptors(LoginRateLimitInterceptor)
   async login(
     @Body() dto: LoginDto,
+    // o web chama esse endpoint server-to-server (server action), entao
+    // @Ip()/@Req() aqui pegaria o servidor do next, nao o navegador de
+    // quem logou. o front repassa o ip/user-agent reais em headers proprios
+    @Headers('x-sessao-ip') ip: string | undefined,
+    @Headers('x-sessao-user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'>> {
-    const { token, user } = await this.loginService.login(dto);
+    const { token, user } = await this.loginService.login(dto, {
+      ip: ip ?? 'desconhecido',
+      userAgent: userAgent ?? 'desconhecido',
+    });
 
     res.set('Cache-Control', 'no-store');
     // o next chama esse endpoint server-to-server (server action) e le o cookie
