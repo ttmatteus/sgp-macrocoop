@@ -1,4 +1,8 @@
-import { hojeEmSaoPaulo } from './data';
+import {
+  hojeEmSaoPaulo,
+  inicioDoDiaEmSaoPaulo,
+  inicioDoProximoDiaEmSaoPaulo,
+} from './data';
 
 describe('hojeEmSaoPaulo', () => {
   afterEach(() => {
@@ -18,5 +22,43 @@ describe('hojeEmSaoPaulo', () => {
     const resultado = hojeEmSaoPaulo();
     expect(resultado.getUTCHours()).toBe(0);
     expect(resultado.getUTCMinutes()).toBe(0);
+  });
+});
+
+describe('inicioDoDiaEmSaoPaulo', () => {
+  it('usa a meia-noite de Sao Paulo, nao a de UTC', () => {
+    expect(inicioDoDiaEmSaoPaulo('2026-06-10')).toEqual(
+      new Date('2026-06-10T03:00:00.000Z'),
+    );
+  });
+
+  it('aceita ISO completo, considerando so o dia', () => {
+    expect(inicioDoDiaEmSaoPaulo('2026-06-10T18:45:00.000Z')).toEqual(
+      new Date('2026-06-10T03:00:00.000Z'),
+    );
+  });
+});
+
+describe('inicioDoProximoDiaEmSaoPaulo', () => {
+  it('avanca um dia civil', () => {
+    expect(inicioDoProximoDiaEmSaoPaulo('2026-06-10')).toEqual(
+      new Date('2026-06-11T03:00:00.000Z'),
+    );
+  });
+
+  it('vira o mes corretamente', () => {
+    expect(inicioDoProximoDiaEmSaoPaulo('2026-06-30')).toEqual(
+      new Date('2026-07-01T03:00:00.000Z'),
+    );
+  });
+
+  it('cobre um turno noturno no dia certo', () => {
+    // 10/06 as 21h30 em Sao Paulo, que em UTC ja e 11/06
+    const turnoNoturno = new Date('2026-06-11T00:30:00.000Z');
+
+    expect(turnoNoturno >= inicioDoDiaEmSaoPaulo('2026-06-10')).toBe(true);
+    expect(turnoNoturno < inicioDoProximoDiaEmSaoPaulo('2026-06-10')).toBe(true);
+
+    expect(turnoNoturno >= inicioDoDiaEmSaoPaulo('2026-06-11')).toBe(false);
   });
 });
