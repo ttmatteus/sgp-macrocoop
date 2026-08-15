@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { CalendarioPopover } from './calendario-popover'
-import { TURNOS_EXEMPLO } from '@/app/(app)/historico/mock'
+import { listarHistorico } from '@/app/(app)/historico/actions'
 import {
   dataCurta,
   diaEmSaoPaulo,
@@ -182,24 +182,62 @@ export function HistoricoScreen({ ativo }: { ativo: boolean }) {
     [filtroPersonalizado, ano, mes],
   )
 
-  const contratosDisponiveis = useMemo(() => {
-    const mapa = new Map<number, string>()
-    for (const t of TURNOS_EXEMPLO) mapa.set(t.contratoId, t.contratoNome)
-    return [...mapa.entries()]
-  }, [])
+  const [itensDoMes, setItensDoMes] = useState<TurnoHistorico[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [falhou, setFalhou] = useState(false)
+  // incrementar isso e o gatilho do "tentar de novo"
+  const [tentativa, setTentativa] = useState(0)
 
-  // TODO: so cosmetico - filtra os dados de exemplo em memoria. quando a
-  // api estiver pronta, isso vira um listarHistorico({ inicio, fim, contratoId, pagina }) de verdade
-  const itensDoMes = useMemo(
-    () =>
-      TURNOS_EXEMPLO.filter(
-        (t) =>
-          t.iniciadoEm >= inicio &&
-          t.iniciadoEm <= `${fim}T23:59:59` &&
-          (contratoFiltro === null || t.contratoId === contratoFiltro),
-      ),
-    [inicio, fim, contratoFiltro],
-  )
+  // busca so quando a aba esta ativa: os 4 paineis da trilha ficam montados
+  // o tempo todo, entao sem isso o historico buscaria no load do app inteiro
+  useEffect(() => {
+    if (!ativo) return
+
+    let cancelado = false
+    setCarregando(true)
+    setFalhou(false)
+
+    listarHistorico({
+      inicio,
+      fim,
+      ...(contratoFiltro !== null ? { contratoId: contratoFiltro } : {}),
+    }).then((resultado) => {
+      if (cancelado) return
+      if (!resultado.ok) {
+        setFalhou(true)
+        setItensDoMes([])
+      } else {
+        setItensDoMes(resultado.itens)
+      }
+      setCarregando(false)
+    })
+
+    // resposta antiga que chega depois de trocar de filtro nao sobrescreve
+    // a atual
+    return () => {
+      cancelado = true
+    }
+  }, [ativo, inicio, fim, contratoFiltro, tentativa])
+
+  // o filtro de contrato vem dos proprios turnos, entao ao filtrar por um
+  // contrato a lista encolheria e nao daria pra voltar. por isso acumula:
+  // contrato que ja apareceu uma vez continua na lista
+  const [contratosVistos, setContratosVistos] = useState<Map<number, string>>(new Map())
+  useEffect(() => {
+    setContratosVistos((anterior) => {
+      const mapa = new Map(anterior)
+      let mudou = false
+      for (const t of itensDoMes) {
+        if (mapa.get(t.contratoId) !== t.contratoNome) {
+          mapa.set(t.contratoId, t.contratoNome)
+          mudou = true
+        }
+      }
+      return mudou ? mapa : anterior
+    })
+  }, [itensDoMes])
+  const contratosDisponiveis = useMemo(() => [...contratosVistos.entries()], [contratosVistos])
+
   const dias = useMemo(() => agruparPorDia(itensDoMes), [itensDoMes])
   const totalPaginas = Math.max(1, Math.ceil(dias.length / DIAS_POR_PAGINA))
   const diasDaPagina = dias.slice((pagina - 1) * DIAS_POR_PAGINA, pagina * DIAS_POR_PAGINA)
@@ -219,13 +257,19 @@ export function HistoricoScreen({ ativo }: { ativo: boolean }) {
   useLayoutEffect(() => {
     if (!ativo) return
     setCardsRevelados(false)
-  }, [ativo, pagina, ano, mes, contratoFiltro, filtroPersonalizado])
+  }, [ativo, carregando, pagina, ano, mes, contratoFiltro, filtroPersonalizado])
 
   useEffect(() => {
-    if (!ativo || cardsRevelados) return
+    if (!ativo || carregando || cardsRevelados) return
     const frame = requestAnimationFrame(() => requestAnimationFrame(() => setCardsRevelados(true)))
     return () => cancelAnimationFrame(frame)
-  }, [ativo, cardsRevelados, pagina, ano, mes, contratoFiltro, filtroPersonalizado])
+  }, [ativo, carregando, cardsRevelados, pagina, ano, mes, contratoFiltro, filtroPersonalizado])
+
+  // filtro novo pode devolver menos dias que a pagina atual, ai a tela
+  // ficaria vazia sem motivo aparente
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(1)
+  }, [pagina, totalPaginas])
 
   const trocarMes = (proximo: { ano: number; mes: number }) => {
     setAno(proximo.ano)
@@ -352,12 +396,42 @@ export function HistoricoScreen({ ativo }: { ativo: boolean }) {
           </div>
         )}
 
-        {dias.length === 0 ? (
+        {carregando ? (
+          // esqueleto no formato do card do dia, pra lista nao "pular" quando
+          // o dado chega
+          <div className="space-y-3" aria-busy="true" aria-label="Carregando turnos">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-28 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+                </div>
+                <div className="mt-4 h-3 w-40 animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-3 w-32 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : falhou ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <span className="flex size-14 items-center justify-center rounded-full bg-muted">
               <Clock className="size-7 text-muted-foreground" />
             </span>
-            <p className="text-sm text-muted-foreground">Nenhum turno registrado nesse mês.</p>
+            <p className="text-sm text-muted-foreground">
+              Não foi possível carregar o histórico.
+            </p>
+            <button
+              onClick={() => setTentativa((t) => t + 1)}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : dias.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-muted">
+              <Clock className="size-7 text-muted-foreground" />
+            </span>
+            <p className="text-sm text-muted-foreground">Nenhum turno registrado nesse período.</p>
           </div>
         ) : (
           <>
