@@ -166,6 +166,11 @@ describe('RecuperarSenhaService', () => {
     expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-1', '1', {
       ex: 3600,
     });
+    // apaga o detalhe de cada sessao (auth:sessao:{jti}) alem do indice
+    // (auth:sessoes:{vinculoId}) - sem isso a sessao continuaria aparecendo
+    // como "ativa" na tela de sessoes mesmo com o jti ja denylistado
+    expect(redis.del).toHaveBeenCalledWith('auth:sessao:jti-1');
+    expect(redis.del).toHaveBeenCalledWith('auth:sessao:jti-2');
     expect(redis.del).toHaveBeenCalledWith('auth:sessoes:7');
     expect(atualizacao.data).toEqual({
       senha_hash: expect.any(String),

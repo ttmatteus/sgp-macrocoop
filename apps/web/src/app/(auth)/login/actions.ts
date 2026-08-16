@@ -1,6 +1,6 @@
 'use server'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { getServerApiUrl } from '@/lib/backend'
 
 export interface LoginResult {
@@ -10,9 +10,21 @@ export interface LoginResult {
 
 export async function login(usuario: string, senha: string): Promise<LoginResult> {
   try {
+    // a chamada pra api é server-to-server, entao sem isso a api so veria o
+    // ip/user-agent do proprio servidor do next. x-forwarded-for pode vir
+    // com vários ip separados por vírgula (proxies no caminho); o primeiro é
+    // o mais próximo do navegador de verdade
+    const cabecalhos = await headers()
+    const ip = cabecalhos.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'desconhecido'
+    const userAgent = cabecalhos.get('user-agent') ?? 'desconhecido'
+
     const res = await fetch(`${getServerApiUrl()}/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-sessao-ip': ip,
+        'x-sessao-user-agent': userAgent,
+      },
       body: JSON.stringify({ usuario, senha }),
     })
 

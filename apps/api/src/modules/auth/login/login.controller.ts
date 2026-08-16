@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -23,13 +24,18 @@ export class LoginController {
   @UseInterceptors(LoginRateLimitInterceptor)
   async login(
     @Body() dto: LoginDto,
+    // chamada e server-to-server, @Ip()/@Req() pegariam o next, nao o navegador
+    @Headers('x-sessao-ip') ip: string | undefined,
+    @Headers('x-sessao-user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'>> {
-    const { token, user } = await this.loginService.login(dto);
+    const { token, user } = await this.loginService.login(dto, {
+      ip: ip ?? 'desconhecido',
+      userAgent: userAgent ?? 'desconhecido',
+    });
 
     res.set('Cache-Control', 'no-store');
-    // o next chama esse endpoint server-to-server (server action) e le o cookie
-    // do header Set-Cookie pra setar o dele mesmo. o token nunca vai no body
+    // o token nunca vai no body, so no Set-Cookie
     res.cookie('session', token, {
       httpOnly: true,
       secure: true,

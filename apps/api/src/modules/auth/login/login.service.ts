@@ -6,19 +6,27 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { CurrentUserPayload } from '../../../core/auth/current-user.interface';
 import {
   activeSessionsKey,
+  sessionDetailKey,
   SESSION_TTL_SECONDS,
 } from '../../../core/auth/session.constants';
 import { RedisService } from '../../../core/redis/redis.service';
 
+// KEYS[2] da TTL por sessao individual, nao so na chave inteira (KEYS[1])
 const REGISTER_SESSION_SCRIPT = `
 redis.call('SADD', KEYS[1], ARGV[1])
 redis.call('EXPIRE', KEYS[1], ARGV[2])
+redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[2])
 return 1
 `;
 
 export interface LoginCredentials {
   usuario: string;
   senha: string;
+}
+
+export interface ContextoSessao {
+  ip: string;
+  userAgent: string;
 }
 
 @Injectable()
@@ -29,7 +37,10 @@ export class LoginService {
     private readonly redis: RedisService,
   ) {}
 
-  async login({ usuario, senha }: LoginCredentials): Promise<{
+  async login(
+    { usuario, senha }: LoginCredentials,
+    contexto: ContextoSessao,
+  ): Promise<{
     token: string;
     user: Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'>;
   }> {
@@ -43,8 +54,7 @@ export class LoginService {
     }
 
     const jti = randomUUID();
-    // jti/iat/exp saem daqui de proposito: quem preenche esses 3 é o proprio
-    // jwt na hora de assinar, a gente so monta os claims da aplicacao
+    // jti/iat/exp ficam de fora, quem preenche e o jwt na assinatura
     const payload: Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'> = {
       vinculoId: vinculo.id,
       pessoaId: vinculo.pessoa_id,
@@ -61,13 +71,16 @@ export class LoginService {
     };
 
     const token = this.jwtService.sign(payload, { jwtid: jti });
-    // de proposito sem try/catch: se o redis cair o login falha msm. sessao que
-    // nasce fora dessa lista n aparece pro invalidarSessoes depois, ai trocar a
-    // senha n derrubava ela. o guard tb ja depende do redis pra ler a denylist
+    const detalheSessao = {
+      ip: contexto.ip,
+      userAgent: contexto.userAgent,
+      criadoEm: new Date().toISOString(),
+    };
+    // sem try/catch de proposito: se o redis cair, o login falha
     await this.redis.eval(
       REGISTER_SESSION_SCRIPT,
-      [activeSessionsKey(vinculo.id)],
-      [jti, SESSION_TTL_SECONDS],
+      [activeSessionsKey(vinculo.id), sessionDetailKey(jti)],
+      [jti, SESSION_TTL_SECONDS, JSON.stringify(detalheSessao)],
     );
     // devolve o payload tb pq o cookie é httpOnly, o front n consegue ler o jwt
     return { token, user: payload };
