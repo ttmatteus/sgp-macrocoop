@@ -1,4 +1,11 @@
 import { Expose } from 'class-transformer';
+import { IsNotEmpty, IsString } from 'class-validator';
+
+export class RevogarSessaoDto {
+  @IsString()
+  @IsNotEmpty()
+  senha!: string;
+}
 
 export class SessaoDto {
   @Expose()

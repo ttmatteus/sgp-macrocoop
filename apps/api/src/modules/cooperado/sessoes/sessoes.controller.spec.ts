@@ -7,7 +7,7 @@ import type { CurrentUserPayload } from '../../../core/auth/current-user.interfa
 
 describe('SessoesController', () => {
   let controller: SessoesController;
-  const sessoesService = { listar: jest.fn(), revogar: jest.fn() };
+  const sessoesService = { listar: jest.fn(), revogar: jest.fn(), revogarTodas: jest.fn() };
 
   const user: CurrentUserPayload = {
     jti: 'jti-atual',
@@ -49,9 +49,15 @@ describe('SessoesController', () => {
     expect(sessoesService.listar).toHaveBeenCalledWith(7, 'jti-atual');
   });
 
-  it('revoga usando o vinculo do usuario autenticado, nunca o da url', async () => {
-    await controller.revogar(user, 'jti-alvo');
+  it('revoga uma sessao usando o vinculo do usuario autenticado e a senha do body', async () => {
+    await controller.revogar(user, 'jti-alvo', { senha: 'Senha123' });
 
-    expect(sessoesService.revogar).toHaveBeenCalledWith(7, 'jti-alvo');
+    expect(sessoesService.revogar).toHaveBeenCalledWith(7, 'jti-alvo', 'Senha123');
+  });
+
+  it('revoga todas usando o vinculo do usuario autenticado e a senha do body', async () => {
+    await controller.revogarTodas(user, { senha: 'Senha123' });
+
+    expect(sessoesService.revogarTodas).toHaveBeenCalledWith(7, 'Senha123');
   });
 });

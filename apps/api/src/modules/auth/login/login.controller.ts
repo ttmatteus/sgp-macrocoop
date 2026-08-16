@@ -24,9 +24,7 @@ export class LoginController {
   @UseInterceptors(LoginRateLimitInterceptor)
   async login(
     @Body() dto: LoginDto,
-    // o web chama esse endpoint server-to-server (server action), entao
-    // @Ip()/@Req() aqui pegaria o servidor do next, nao o navegador de
-    // quem logou. o front repassa o ip/user-agent reais em headers proprios
+    // chamada e server-to-server, @Ip()/@Req() pegariam o next, nao o navegador
     @Headers('x-sessao-ip') ip: string | undefined,
     @Headers('x-sessao-user-agent') userAgent: string | undefined,
     @Res({ passthrough: true }) res: Response,
@@ -37,8 +35,7 @@ export class LoginController {
     });
 
     res.set('Cache-Control', 'no-store');
-    // o next chama esse endpoint server-to-server (server action) e le o cookie
-    // do header Set-Cookie pra setar o dele mesmo. o token nunca vai no body
+    // o token nunca vai no body, so no Set-Cookie
     res.cookie('session', token, {
       httpOnly: true,
       secure: true,

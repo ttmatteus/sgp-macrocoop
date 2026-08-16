@@ -11,12 +11,7 @@ import {
 } from '../../../core/auth/session.constants';
 import { RedisService } from '../../../core/redis/redis.service';
 
-// o SADD/EXPIRE sozinho (como era antes) da TTL na chave inteira, nao por
-// jti: se um login novo chega antes do set expirar, o EXPIRE reseta a chave
-// toda e um jti ja vencido continua listado pra sempre. por isso a sessao
-// tambem vira uma chave propria (KEYS[2]), com TTL individual de verdade -
-// o set (KEYS[1]) passa a ser so indice de candidatos, filtrado na leitura
-// (ver SessoesService.listar)
+// KEYS[2] da TTL por sessao individual, nao so na chave inteira (KEYS[1])
 const REGISTER_SESSION_SCRIPT = `
 redis.call('SADD', KEYS[1], ARGV[1])
 redis.call('EXPIRE', KEYS[1], ARGV[2])
@@ -59,8 +54,7 @@ export class LoginService {
     }
 
     const jti = randomUUID();
-    // jti/iat/exp saem daqui de proposito: quem preenche esses 3 é o proprio
-    // jwt na hora de assinar, a gente so monta os claims da aplicacao
+    // jti/iat/exp ficam de fora, quem preenche e o jwt na assinatura
     const payload: Omit<CurrentUserPayload, 'jti' | 'iat' | 'exp'> = {
       vinculoId: vinculo.id,
       pessoaId: vinculo.pessoa_id,
@@ -82,9 +76,7 @@ export class LoginService {
       userAgent: contexto.userAgent,
       criadoEm: new Date().toISOString(),
     };
-    // de proposito sem try/catch: se o redis cair o login falha msm. sessao que
-    // nasce fora dessa lista n aparece pro invalidarSessoes depois, ai trocar a
-    // senha n derrubava ela. o guard tb ja depende do redis pra ler a denylist
+    // sem try/catch de proposito: se o redis cair, o login falha
     await this.redis.eval(
       REGISTER_SESSION_SCRIPT,
       [activeSessionsKey(vinculo.id), sessionDetailKey(jti)],

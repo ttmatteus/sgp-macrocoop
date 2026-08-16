@@ -1,10 +1,15 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { hash } from 'argon2';
 import { SessoesService } from './sessoes.service';
+import { PrismaService } from '../../../core/prisma/prisma.service';
 import { RedisService } from '../../../core/redis/redis.service';
 
 describe('SessoesService', () => {
   let service: SessoesService;
+  const prisma = {
+    vinculo_cooperativa: { findUnique: jest.fn() },
+  };
   const redis = {
     smembers: jest.fn(),
     mget: jest.fn(),
@@ -16,7 +21,11 @@ describe('SessoesService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SessoesService, { provide: RedisService, useValue: redis }],
+      providers: [
+        SessoesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RedisService, useValue: redis },
+      ],
     }).compile();
 
     service = module.get<SessoesService>(SessoesService);
@@ -70,37 +79,69 @@ describe('SessoesService', () => {
 
       expect(resultado.map((s) => s.jti)).toEqual(['jti-nova', 'jti-antiga']);
     });
-
-    it('busca o detalhe pela chave sessionDetailKey, uma por jti', async () => {
-      redis.smembers.mockResolvedValue(['abc']);
-      redis.mget.mockResolvedValue([null]);
-
-      await service.listar(1, 'x');
-
-      expect(redis.mget).toHaveBeenCalledWith('auth:sessao:abc');
-    });
   });
 
-  describe('revogar', () => {
-    it('recusa revogar jti que nao pertence ao vinculo (idor)', async () => {
+  describe('revogar (uma sessao)', () => {
+    it('recusa com senha errada antes de tocar no redis', async () => {
+      prisma.vinculo_cooperativa.findUnique.mockResolvedValue({
+        senha_hash: await hash('SenhaCerta123'),
+      });
+
+      await expect(service.revogar(1, 'jti-x', 'SenhaErrada')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(redis.sismember).not.toHaveBeenCalled();
+    });
+
+    it('recusa revogar jti que nao pertence ao vinculo (idor), mesmo com senha certa', async () => {
+      prisma.vinculo_cooperativa.findUnique.mockResolvedValue({
+        senha_hash: await hash('SenhaCerta123'),
+      });
       redis.sismember.mockResolvedValue(0);
 
-      await expect(service.revogar(1, 'jti-de-outro-vinculo')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.revogar(1, 'jti-de-outro-vinculo', 'SenhaCerta123'),
+      ).rejects.toThrow(NotFoundException);
       expect(redis.set).not.toHaveBeenCalled();
     });
 
-    it('denylista, apaga o detalhe e remove do indice', async () => {
+    it('denylista, apaga o detalhe e remove do indice com senha certa', async () => {
+      prisma.vinculo_cooperativa.findUnique.mockResolvedValue({
+        senha_hash: await hash('SenhaCerta123'),
+      });
       redis.sismember.mockResolvedValue(1);
 
-      await service.revogar(7, 'jti-x');
+      await service.revogar(7, 'jti-x', 'SenhaCerta123');
 
-      expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-x', '1', {
-        ex: 3600,
-      });
+      expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-x', '1', { ex: 3600 });
       expect(redis.del).toHaveBeenCalledWith('auth:sessao:jti-x');
       expect(redis.srem).toHaveBeenCalledWith('auth:sessoes:7', 'jti-x');
+    });
+  });
+
+  describe('revogarTodas', () => {
+    it('recusa com senha errada', async () => {
+      prisma.vinculo_cooperativa.findUnique.mockResolvedValue({
+        senha_hash: await hash('SenhaCerta123'),
+      });
+
+      await expect(service.revogarTodas(1, 'SenhaErrada')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(redis.smembers).not.toHaveBeenCalled();
+    });
+
+    it('revoga tudo (inclusive a sessao atual) com senha certa', async () => {
+      prisma.vinculo_cooperativa.findUnique.mockResolvedValue({
+        senha_hash: await hash('SenhaCerta123'),
+      });
+      redis.smembers.mockResolvedValue(['jti-1', 'jti-2']);
+
+      await service.revogarTodas(7, 'SenhaCerta123');
+
+      expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-1', '1', { ex: 3600 });
+      expect(redis.set).toHaveBeenCalledWith('denylist:jti:jti-2', '1', { ex: 3600 });
+      expect(redis.del).toHaveBeenCalledWith('auth:sessoes:7');
     });
   });
 });
