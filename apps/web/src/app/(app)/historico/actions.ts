@@ -1,6 +1,7 @@
 'use server'
 
-import { apiFetch } from '@/lib/backend'
+import { unstable_rethrow } from 'next/navigation'
+import { apiFetchOuRedirecionar } from '@/lib/backend'
 import type { FiltrosHistorico, HistoricoTurnos, TurnoHistorico } from './tipos'
 
 export type HistoricoResult =
@@ -29,7 +30,7 @@ async function buscarPagina(
   pagina: number,
 ): Promise<HistoricoTurnos | null> {
   const query = montarQuery({ ...filtros, pagina, limite: LIMITE_POR_PAGINA })
-  const res = await apiFetch(`/turnos/historico?${query}`)
+  const res = await apiFetchOuRedirecionar(`/turnos/historico?${query}`)
   if (!res.ok) return null
   return res.json()
 }
@@ -56,7 +57,22 @@ export async function listarHistorico(filtros: FiltrosHistorico): Promise<Histor
     }
 
     return { ok: true, itens }
-  } catch {
+  } catch (erro) {
+    unstable_rethrow(erro)
+    return { ok: false }
+  }
+}
+
+// pro widget de "histórico recente" do dashboard: so os ultimos turnos, sem
+// filtro de periodo nem a paginacao por dia do listarHistorico acima
+export async function listarHistoricoRecente(limite: number): Promise<HistoricoResult> {
+  try {
+    const res = await apiFetchOuRedirecionar(`/turnos/historico?limite=${limite}&pagina=1`)
+    if (!res.ok) return { ok: false }
+    const dados: HistoricoTurnos = await res.json()
+    return { ok: true, itens: dados.itens }
+  } catch (erro) {
+    unstable_rethrow(erro)
     return { ok: false }
   }
 }

@@ -7,11 +7,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { hash } from 'argon2';
-import {
-  activeSessionsKey,
-  deniedSessionKey,
-  SESSION_TTL_SECONDS,
-} from '../../../core/auth/session.constants';
+import { revogarTodasAsSessoes } from '../../../core/auth/sessions';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { RedisService } from '../../../core/redis/redis.service';
 
@@ -96,7 +92,7 @@ export class RecuperarSenhaService {
       throw new GoneException('Token de redefinição expirado.');
     }
 
-    await this.invalidarSessoes(vinculo.id);
+    await revogarTodasAsSessoes(this.redis, vinculo.id);
 
     return { sucesso: true, mensagem: 'Senha redefinida com sucesso.' };
   }
@@ -197,23 +193,6 @@ export class RecuperarSenhaService {
       [chave],
       [RATE_LIMIT_TTL_SECONDS],
     );
-  }
-
-  private async invalidarSessoes(vinculoId: number) {
-    const chaveSessoes = activeSessionsKey(vinculoId);
-    const jtis = await this.redis.smembers<string[]>(chaveSessoes);
-
-    await Promise.all(
-      jtis.map((jti) =>
-        this.redis.set(deniedSessionKey(jti), '1', {
-          ex: SESSION_TTL_SECONDS,
-        }),
-      ),
-    );
-
-    if (jtis.length > 0) {
-      await this.redis.del(chaveSessoes);
-    }
   }
 
   private limparToken(vinculoId: number, tokenHash: string) {

@@ -12,8 +12,13 @@ import { PerfilPanel } from '@/components/perfil/perfil-panel'
 import { AjustesPanel } from '@/components/perfil/ajustes-panel'
 import { HistoricoScreen } from '@/components/historico/historico-screen'
 import type { Perfil } from '@/lib/perfil'
+import { verificarSessaoAtiva } from '@/lib/sessao-actions'
 import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
 import type { SessionUser } from '@/lib/session'
+
+// websocket exigiria --min-instances no cloud run (~US$80/mes); polling
+// cobra so por request, entao um intervalo curto sai de graca em comparação
+const INTERVALO_VERIFICACAO_SESSAO_MS = 5_000
 
 const bottomNav = [
   { label: 'Início', icon: Home, href: '/dashboard' },
@@ -68,6 +73,23 @@ export function AppShell({
   // centralizado aqui pq dashboard, perfil e ajustes têm botão de sair, cada um
   const pedirConfirmacaoSaida = () => setConfirmandoSaida(true)
 
+  // AppShell fica montado a sessao inteira, entao um unico interval aqui
+  // basta; so verifica com a aba visivel pra nao gastar rede/bateria
+  useEffect(() => {
+    const verificarSeVisivel = () => {
+      if (document.visibilityState !== 'visible') return
+      void verificarSessaoAtiva()
+    }
+
+    const intervalo = setInterval(verificarSeVisivel, INTERVALO_VERIFICACAO_SESSAO_MS)
+    document.addEventListener('visibilitychange', verificarSeVisivel)
+
+    return () => {
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', verificarSeVisivel)
+    }
+  }, [])
+
   const confirmarSaida = async () => {
     setConfirmandoSaida(false)
     setSaindo(true)
@@ -78,6 +100,8 @@ export function AppShell({
   // alterar-senha n é aba da trilha, é navegação pra frente, ai n renderiza a
   // trilha aqui pq o router já foi pra outra pagina
   const emAlterarSenha = pathname.startsWith('/perfil/ajustes/alterar-senha')
+  // sessoes ativas segue o msm padrao do alterar-senha
+  const emSessoesAtivas = pathname.startsWith('/perfil/ajustes/sessoes')
   // ponto tb e navegacao pra frente (tela cheia com voltar), n aba da trilha
   const emTelaCheia = pathname.startsWith('/ponto')
   const tela: Tela =
@@ -93,7 +117,7 @@ export function AppShell({
     // enquanto tá no alterar-senha a div da trilha nem existe no dom (ve o
     // return <>{children}</> ali embaixo). qnd volta ela remonta do zero sem
     // transform, entao conta como um "primeiro mount" de novo
-    if (emAlterarSenha || emTelaCheia) {
+    if (emAlterarSenha || emSessoesAtivas || emTelaCheia) {
       montouRef.current = false
       return
     }
@@ -113,7 +137,7 @@ export function AppShell({
       duration: 0.5,
       ease: 'power2.inOut',
     })
-  }, [tela, emAlterarSenha, emTelaCheia])
+  }, [tela, emAlterarSenha, emSessoesAtivas, emTelaCheia])
 
   // splash verde que expande do clique e revela a rota de destino por baixo.
   // fica aqui fora da trilha (que o gsap transforma) e acima do navbar,
@@ -150,15 +174,17 @@ export function AppShell({
 
   const handleAlterarSenha = (e: React.MouseEvent) =>
     handleSplashNavegacao(e, '/perfil/ajustes/alterar-senha')
+  const handleSessoesAtivas = (e: React.MouseEvent) =>
+    handleSplashNavegacao(e, '/perfil/ajustes/sessoes')
   const handleBaterPonto = (e: React.MouseEvent) => handleSplashNavegacao(e, '/ponto')
 
   if (saindo) {
     return <LogoutScreen />
   }
 
-  // alterar-senha empilha (navegação pra frente), n é aba da trilha, só
-  // renderiza o conteúdo real da rota aqui
-  if (emAlterarSenha || emTelaCheia) return <>{children}</>
+  // alterar-senha e sessoes ativas empilham (navegação pra frente), n são
+  // aba da trilha, só renderiza o conteúdo real da rota aqui
+  if (emAlterarSenha || emSessoesAtivas || emTelaCheia) return <>{children}</>
 
   return (
     <div ref={frameRef} className="relative h-[var(--app-height)] overflow-hidden bg-background">
@@ -166,6 +192,7 @@ export function AppShell({
         <div className="h-full w-1/4 shrink-0">
           <DashboardPanel
             nome={nome}
+            ativo={tela === 'dashboard'}
             turnoAberto={turnoAberto}
             onSair={pedirConfirmacaoSaida}
             onBaterPonto={handleBaterPonto}
@@ -185,7 +212,11 @@ export function AppShell({
           />
         </div>
         <div className="h-full w-1/4 shrink-0">
-          <AjustesPanel onAlterarSenha={handleAlterarSenha} onSair={pedirConfirmacaoSaida} />
+          <AjustesPanel
+            onAlterarSenha={handleAlterarSenha}
+            onSessoesAtivas={handleSessoesAtivas}
+            onSair={pedirConfirmacaoSaida}
+          />
         </div>
       </div>
 
