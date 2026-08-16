@@ -78,6 +78,15 @@ export function tituloDoDia(chaveDia: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1).replace('.', '')
 }
 
+export function rotuloRelativo(isoUtc: string): string {
+  const hoje = diaEmSaoPaulo(new Date().toISOString())
+  const ontem = diaEmSaoPaulo(new Date(Date.now() - 86_400_000).toISOString())
+  const dia = diaEmSaoPaulo(isoUtc)
+  if (dia === hoje) return 'Hoje'
+  if (dia === ontem) return 'Ontem'
+  return dataCurta(dia)
+}
+
 export function dataCurta(chaveDia: string): string {
   const [, mes, dia] = chaveDia.split('-')
   return `${dia}/${mes}`

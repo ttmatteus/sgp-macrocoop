@@ -7,6 +7,9 @@ import Image from 'next/image'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { aplicarTema, obterPreferencia } from '@/lib/tema'
 import type { TurnoAberto } from '@/app/(app)/ponto/tipos'
+import { listarHistoricoRecente } from '@/app/(app)/historico/actions'
+import { horaEmSaoPaulo, rotuloRelativo } from '@/app/(app)/historico/datas'
+import type { TurnoHistorico } from '@/app/(app)/historico/tipos'
 import {
   Archive,
   Bell,
@@ -72,31 +75,37 @@ const escala = [
   { label: 'Saída', valor: '17:30' },
 ]
 
-const historico: {
+type EventoRecente = {
+  id: string
   titulo: string
-  data: string
-  hora: string
+  iso: string
   tag: { label: string; variant: BadgeProps['variant'] }
-}[] = [
-  {
-    titulo: 'Entrada · Início da jornada',
-    data: 'Hoje',
-    hora: '08:15',
-    tag: { label: 'No horário', variant: 'success' },
-  },
-  {
-    titulo: 'Saída · Fim de expediente',
-    data: 'Ontem',
-    hora: '17:35',
-    tag: { label: '+5 min extras', variant: 'warning' },
-  },
-  {
-    titulo: 'Retorno · Almoço',
-    data: 'Ontem',
-    hora: '13:02',
-    tag: { label: 'No horário', variant: 'success' },
-  },
-]
+}
+
+// cada turno vira ate 2 eventos (entrada/saida); so turno encerrado tem
+// os dois, e o historico so devolve turno encerrado (ver historico-turnos.service.ts)
+function turnosParaEventos(turnos: TurnoHistorico[]): EventoRecente[] {
+  const eventos: EventoRecente[] = turnos.flatMap((t) => {
+    const emAtraso = t.status === 'atraso'
+    return [
+      {
+        id: `${t.id}-saida`,
+        titulo: 'Saída · Fim de expediente',
+        iso: t.encerradoEm,
+        tag: { label: 'No horário', variant: 'success' as const },
+      },
+      {
+        id: `${t.id}-entrada`,
+        titulo: 'Entrada · Início da jornada',
+        iso: t.iniciadoEm,
+        tag: emAtraso
+          ? { label: 'Atraso', variant: 'error' as const }
+          : { label: 'No horário', variant: 'success' as const },
+      },
+    ]
+  })
+  return eventos.sort((a, b) => b.iso.localeCompare(a.iso)).slice(0, 3)
+}
 
 // rotulos, icones, cores e imagens vindos do ds-sgp (telas/dashboard-coo), os 4
 // estados originais. so os 2 primeiros vem de dado real hoje: nosso modelo nao
@@ -212,6 +221,7 @@ function iniciais(nome: string) {
 
 export function DashboardPanel({
   nome,
+  ativo,
   turnoAberto,
   onSair,
   onBaterPonto,
@@ -219,6 +229,7 @@ export function DashboardPanel({
   modoDev,
 }: {
   nome: string
+  ativo: boolean
   turnoAberto: TurnoAberto | null
   onSair: () => void
   onBaterPonto: (e: React.MouseEvent) => void
@@ -286,6 +297,15 @@ export function DashboardPanel({
     atualizar()
     const id = setInterval(atualizar, 60_000)
     return () => clearInterval(id)
+  }, [])
+
+  const [eventosRecentes, setEventosRecentes] = useState<EventoRecente[]>([])
+  const [carregandoHistorico, setCarregandoHistorico] = useState(true)
+  useEffect(() => {
+    listarHistoricoRecente(2).then((resultado) => {
+      setEventosRecentes(resultado.ok ? turnosParaEventos(resultado.itens) : [])
+      setCarregandoHistorico(false)
+    })
   }, [])
 
   const pedirConfirmacaoSaida = () => {
@@ -460,29 +480,50 @@ export function DashboardPanel({
 
         {/* Histórico recente */}
         <div className="shrink-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border p-4">
+          <button
+            type="button"
+            onClick={() => router.push('/historico')}
+            className="flex w-full items-center justify-between border-b border-border p-4 text-left transition-colors hover:bg-muted/40"
+          >
             <h3 className="text-base font-semibold text-foreground">Histórico recente</h3>
-          </div>
+            <ChevronRight className="size-5 shrink-0 text-border" />
+          </button>
           <div className="divide-y divide-border">
-            {historico.map((h) => (
-              <div key={h.titulo} className="flex items-center justify-between gap-3 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Clock className="size-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{h.titulo}</p>
-                    <p className="text-xs text-muted-foreground">{h.data}</p>
+            {carregandoHistorico ? (
+              Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3 p-4">
+                  <span className="size-11 shrink-0 animate-pulse rounded-lg bg-muted" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-32 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-14 animate-pulse rounded bg-muted" />
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <p className="font-mono text-base font-semibold text-foreground">{h.hora}</p>
-                  <Badge variant={h.tag.variant} className="text-[10px]">
-                    {h.tag.label}
-                  </Badge>
+              ))
+            ) : eventosRecentes.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">Nenhum registro ainda.</p>
+            ) : (
+              eventosRecentes.map((ev) => (
+                <div key={ev.id} className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Clock className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{ev.titulo}</p>
+                      <p className="text-xs text-muted-foreground">{rotuloRelativo(ev.iso)}</p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <p className="font-mono text-base font-semibold text-foreground">
+                      {horaEmSaoPaulo(ev.iso)}
+                    </p>
+                    <Badge variant={ev.tag.variant} className="text-[10px]">
+                      {ev.tag.label}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </main>
@@ -490,7 +531,12 @@ export function DashboardPanel({
       {/* BottomNav agora é compartilhado, vem do AppShell (trilha dashboard/perfil/ajustes) */}
       {/* Confirmação de saída fica no AppShell agora, é compartilhada com perfil/ajustes */}
 
+      {/* so renderiza os overlays flutuantes com o dashboard na tela: o painel
+          fica montado o app inteiro (e um dos 4 da trilha) e esses elementos
+          vao pra document.body, entao fora daqui eles ficariam por cima das
+          outras telas roubando o clique */}
       {montadoNoBody &&
+        ativo &&
         createPortal(
           <>
             {notifAberto && <div onClick={() => setNotifAberto(false)} className="fixed inset-0 z-20" />}

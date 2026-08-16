@@ -1,16 +1,31 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { gsap } from 'gsap'
-import { IdCard, Lock, HelpCircle, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { IdCard, Lock, HelpCircle, ArrowLeft, Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react'
 import { SplashButton } from '@/components/ui/splash-button'
 import { LoginLoadingScreen } from '@/components/auth/login-loading-screen'
 import { login } from '@/app/(auth)/login/actions'
 
 const MAX_TENTATIVAS = 3
 const BLOQUEIO_SEGUNDOS = 5 * 60
+
+// isolado num componente proprio pq useSearchParams() exige Suspense em volta
+function AvisoSessaoEncerrada() {
+  const searchParams = useSearchParams()
+  if (searchParams.get('motivo') !== 'sessao-encerrada') return null
+
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl bg-info/10 px-3.5 py-3 text-left">
+      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-info" />
+      <p className="text-sm leading-relaxed text-info">
+        Sua sessão foi encerrada. Entre novamente pra continuar.
+      </p>
+    </div>
+  )
+}
 
 export function LoginPanel() {
   const router = useRouter()
@@ -160,6 +175,10 @@ export function LoginPanel() {
               Preencha os campos abaixo para acessar sua conta no GDC.
             </p>
           </div>
+
+          <Suspense fallback={null}>
+            <AvisoSessaoEncerrada />
+          </Suspense>
 
           <div className="space-y-3">
             <div className="relative">

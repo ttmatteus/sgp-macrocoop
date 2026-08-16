@@ -1,6 +1,7 @@
 'use server'
 
-import { apiFetch } from '@/lib/backend'
+import { unstable_rethrow } from 'next/navigation'
+import { apiFetch, apiFetchOuRedirecionar } from '@/lib/backend'
 import type {
   ContratosResult,
   DadosRegistro,
@@ -11,12 +12,13 @@ import type {
 
 export async function listarContratosDisponiveis(): Promise<ContratosResult> {
   try {
-    const res = await apiFetch('/turnos/contratos-disponiveis')
+    const res = await apiFetchOuRedirecionar('/turnos/contratos-disponiveis')
     if (!res.ok) {
       return { ok: false, erro: 'conexao' }
     }
     return { ok: true, contratos: await res.json() }
-  } catch {
+  } catch (erro) {
+    unstable_rethrow(erro)
     return { ok: false, erro: 'conexao' }
   }
 }
@@ -24,10 +26,11 @@ export async function listarContratosDisponiveis(): Promise<ContratosResult> {
 /** null = sem turno aberto (a API responde 204), que e estado normal */
 export async function buscarTurnoAberto(): Promise<TurnoAberto | null> {
   try {
-    const res = await apiFetch('/turnos/aberto')
+    const res = await apiFetchOuRedirecionar('/turnos/aberto')
     if (res.status === 204 || !res.ok) return null
     return await res.json()
-  } catch {
+  } catch (erro) {
+    unstable_rethrow(erro)
     return null
   }
 }

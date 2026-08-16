@@ -1,4 +1,5 @@
-import { apiFetch } from './backend'
+import { unstable_rethrow } from 'next/navigation'
+import { apiFetchOuRedirecionar } from './backend'
 
 export interface Perfil {
   nome: string
@@ -15,10 +16,11 @@ export interface Perfil {
 // devolve null se a api cair pra tela conseguir renderizar mesmo assim
 export async function buscarPerfil(): Promise<Perfil | null> {
   try {
-    const res = await apiFetch('/perfil')
+    const res = await apiFetchOuRedirecionar('/perfil')
     if (!res.ok) return null
     return (await res.json()) as Perfil
-  } catch {
+  } catch (erro) {
+    unstable_rethrow(erro)
     return null
   }
 }

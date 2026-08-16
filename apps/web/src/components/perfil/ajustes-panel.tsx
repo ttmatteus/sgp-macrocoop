@@ -22,9 +22,11 @@ import {
 
 export function AjustesPanel({
   onAlterarSenha,
+  onSessoesAtivas,
   onSair,
 }: {
   onAlterarSenha?: (e: React.MouseEvent) => void
+  onSessoesAtivas?: (e: React.MouseEvent) => void
   onSair: () => void
 }) {
   const router = useRouter()
@@ -125,7 +127,7 @@ export function AjustesPanel({
           </p>
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <AjusteRow icon={Lock} label="Alterar senha" onClick={onAlterarSenha} />
-            <AjusteRow icon={Smartphone} label="Sessões ativas" last />
+            <AjusteRow icon={Smartphone} label="Sessões ativas" onClick={onSessoesAtivas} last />
           </div>
         </section>
 
