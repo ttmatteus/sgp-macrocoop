@@ -1,8 +1,30 @@
+import type { Metadata, Viewport } from 'next';
 import './global.css';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'GDC Macrocoop',
   description: 'Sistema de Gestão de Cooperativas',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'GDC',
+  },
+  // o Next só gera a meta "mobile-web-app-capable" (padrão novo, so
+  // suportado a partir do iOS 17.4/Safari 17.4). a versao com prefixo
+  // apple- cobre versoes de iOS mais antigas, que ignoram a nova
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#267b4c',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 // aplicado antes do React hidratar pra nao piscar o tema errado no reload.
